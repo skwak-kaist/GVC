@@ -7,7 +7,10 @@ GPU_id=0
 GVC_testmode=1
 port=6025
 
-scenes="apple backpack block creeper handwavy haru-sit mochi-high-five pillow space-out spin sriracha-tree teddy wheel" 
+#scenes="apple backpack block creeper handwavy haru-sit mochi-high-five pillow space-out spin sriracha-#tree teddy wheel" 
+scenes="space-out spin sriracha-tree teddy wheel" 
+
+
 #scenes="flame_salmon_1" 
 
 config=anchor_v0

@@ -17,7 +17,7 @@ from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 from time import time as get_time
 
-def generate_neural_gaussians(viewpoint_camera, pc : GaussianModel, visible_mask=None, is_training=False):
+def generate_neural_gaussians_original(viewpoint_camera, pc : GaussianModel, visible_mask=None, is_training=False):
     ## view frustum filtering for acceleration    
     if visible_mask is None:
         visible_mask = torch.ones(pc.get_anchor.shape[0], dtype=torch.bool, device = pc.get_anchor.device)
@@ -132,6 +132,122 @@ def generate_neural_gaussians(viewpoint_camera, pc : GaussianModel, visible_mask
     else:
         return xyz, color, opacity, scaling, rot
 
+def generate_neural_gaussians(viewpoint_camera, pc : GaussianModel, visible_mask=None, is_training=False):
+    ## view frustum filtering for acceleration    
+    if visible_mask is None:
+        visible_mask = torch.ones(pc.get_anchor.shape[0], dtype=torch.bool, device = pc.get_anchor.device)
+    
+    # visible_mask에 True가 몇 개인지 확인
+    # print("visible_mask:",visible_mask.sum()) # 너무 큼
+
+    feat = pc._anchor_feat[visible_mask]
+    anchor = pc.get_anchor[visible_mask]
+    grid_offsets = pc._offset[visible_mask]
+    grid_scaling = pc.get_scaling[visible_mask]
+
+    ## get view properties for anchor
+    #print("anchor device:",anchor.device) # cuda:0
+    #print("viewpoint_camera.camera_center device:",viewpoint_camera.camera_center.device) # cpu
+    viewpoint_camera.camera_center = viewpoint_camera.camera_center.cuda()
+    ob_view = anchor - viewpoint_camera.camera_center
+    # dist
+    ob_dist = ob_view.norm(dim=1, keepdim=True)
+    # view
+    ob_view = ob_view / ob_dist
+
+    ## view-adaptive feature
+    if pc.use_feat_bank:
+        cat_view = torch.cat([ob_view, ob_dist], dim=1)
+        
+        bank_weight = pc.get_featurebank_mlp(cat_view).unsqueeze(dim=1) # [n, 1, 3]
+
+        ## multi-resolution feat
+        feat = feat.unsqueeze(dim=-1)
+        feat = feat[:,::4, :1].repeat([1,4,1])*bank_weight[:,:,:1] + \
+            feat[:,::2, :1].repeat([1,2,1])*bank_weight[:,:,1:2] + \
+            feat[:,::1, :1]*bank_weight[:,:,2:]
+        feat = feat.squeeze(dim=-1) # [n, c]
+
+
+    cat_local_view = torch.cat([feat, ob_view, ob_dist], dim=1) # [N, c+3+1]
+    cat_local_view_wodist = torch.cat([feat, ob_view], dim=1) # [N, c+3]
+    if pc.appearance_dim > 0:
+        #camera_indicies = torch.ones_like(cat_local_view[:,0], dtype=torch.long, device=ob_dist.device) * viewpoint_camera.uid
+        camera_indicies = torch.ones_like(cat_local_view[:,0], dtype=torch.long, device=ob_dist.device) * 10 # 왜 인지는 모르겠지만 이렇게 하니까 cuda error가 발생하지 않음
+            
+        appearance = pc.get_appearance(camera_indicies)
+
+    # get offset's opacity
+    if pc.add_opacity_dist:
+        neural_opacity = pc.get_opacity_mlp(cat_local_view) # [N, k]
+    else:
+        # print("cat_local_view_wodist:",cat_local_view_wodist.shape) # 얘는 죄가 없음
+        #print("camera_indicies:",camera_indicies) # camera_indicies: torch.Size([10562])
+        neural_opacity = pc.get_opacity_mlp(cat_local_view_wodist) 
+        # 여기서 계속 CUDA error 발생함
+        # CUBLAS_STATUS_EXECUTION_FAILED --> dimension mistmatch이슈가 많다고 함
+        # cat_local_view_wodist: shape torch.size([10562, 35])
+
+
+    # opacity mask generation
+    neural_opacity = neural_opacity.reshape([-1, 1])
+    mask = (neural_opacity>0.0)
+    mask = mask.view(-1)
+    #print("mask:",mask.shape) # mask: torch.Size([105620])
+    #print("neural_opacity:",neural_opacity.shape) # neural_opacity: torch.Size([105620, 1])
+
+    # select opacity 
+    opacity = neural_opacity[mask]
+    # neural_opacity: 105620, 1
+    # mask: 105620
+
+    # get offset's color
+    if pc.appearance_dim > 0:
+        if pc.add_color_dist:
+            color = pc.get_color_mlp(torch.cat([cat_local_view, appearance], dim=1))
+        else:
+            color = pc.get_color_mlp(torch.cat([cat_local_view_wodist, appearance], dim=1))
+    else:
+        if pc.add_color_dist:
+            color = pc.get_color_mlp(cat_local_view)
+        else:
+            color = pc.get_color_mlp(cat_local_view_wodist)
+    color = color.reshape([anchor.shape[0]*pc.n_offsets, 3])# [mask]
+
+    # get offset's cov
+    if pc.add_cov_dist:
+        scale_rot = pc.get_cov_mlp(cat_local_view)
+    else:
+        scale_rot = pc.get_cov_mlp(cat_local_view_wodist)
+    scale_rot = scale_rot.reshape([anchor.shape[0]*pc.n_offsets, 7]) # [mask]
+    
+    # offsets
+    offsets = grid_offsets.view([-1, 3]) # [mask]
+    
+    # combine for parallel masking
+    concatenated = torch.cat([grid_scaling, anchor], dim=-1)
+    concatenated_repeated = repeat(concatenated, 'n (c) -> (n k) (c)', k=pc.n_offsets)
+    concatenated_all = torch.cat([concatenated_repeated, color, scale_rot, offsets], dim=-1)
+    masked = concatenated_all[mask]
+    scaling_repeat, repeat_anchor, color, scale_rot, offsets = masked.split([6, 3, 3, 7, 3], dim=-1)
+    
+    # post-process cov
+    # modified !!! - s.kwak
+    # scaling = scaling_repeat[:,3:] * torch.sigmoid(scale_rot[:,:3]) # * (1+torch.sigmoid(repeat_dist))
+    
+    # modified!!! - s.kwak
+    #rot = pc.rotation_activation(scale_rot[:,3:7])
+    rot = scale_rot[:,3:7]
+    
+    # post-process offsets to get centers for gaussians
+    offsets = offsets * scaling_repeat[:,:3]
+    xyz = repeat_anchor + offsets
+
+    if is_training:
+        return xyz, color, opacity, scaling_repeat[:,3:], scale_rot[:,:3], rot, neural_opacity, mask
+    else:
+        return xyz, color, opacity, scaling_repeat[:,3:], scale_rot[:,:3], rot
+
 
 def render(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, 
            override_color = None, stage="fine", cam_type=None, visible_mask=None, retain_grad=False):
@@ -182,10 +298,16 @@ def render_test1(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     is_training = pc.get_color_mlp.training
            
     # anchor 인근의 neural gaussian을 생성한다. 
+    #if is_training:
+    #    xyz, color, opacity, scaling, rot, neural_opacity, mask = generate_neural_gaussians(viewpoint_camera, pc, visible_mask, is_training=is_training)
+    #else:
+    #    xyz, color, opacity, scaling, rot = generate_neural_gaussians(viewpoint_camera, pc, visible_mask, is_training=is_training) 
+
+    # modified!!!!
     if is_training:
-        xyz, color, opacity, scaling, rot, neural_opacity, mask = generate_neural_gaussians(viewpoint_camera, pc, visible_mask, is_training=is_training)
+        xyz, color, opacity, scaling_repeat, scaling, rot, neural_opacity, mask = generate_neural_gaussians(viewpoint_camera, pc, visible_mask, is_training=is_training)
     else:
-        xyz, color, opacity, scaling, rot = generate_neural_gaussians(viewpoint_camera, pc, visible_mask, is_training=is_training) 
+        xyz, color, opacity, scaling_repeat, scaling, rot = generate_neural_gaussians(viewpoint_camera, pc, visible_mask, is_training=is_training) 
 
     # screenspace point 생성
     screenspace_points = torch.zeros_like(xyz, dtype=pc.get_anchor.dtype, requires_grad=True, device="cuda") + 0
@@ -272,6 +394,10 @@ def render_test1(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     # fine elif 문 안에 있던걸 밖으로 뺐음
 
     #scales_final = pc.scaling_activation(scales_final) 
+    
+    # modified!!!
+    scales_final = scaling_repeat * torch.sigmoid(scales_final) 
+                
     rotations_final = pc.rotation_activation(rotations_final)
     #opacity_final = pc.opacity_activation(opacity_final)
 

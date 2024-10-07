@@ -1,0 +1,10 @@
+# ninja log v5
+1	8638	1722409559277194734	/mnt/nvme0n1/Project_NeRF/4DGaussians/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/simple_knn.o	2330486b131e0b9
+0	18347	1722409568969452319	/mnt/nvme0n1/Project_NeRF/4DGaussians/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/ext.o	32a57c3bd6a30284
+1	36921	1722409587557944403	/mnt/nvme0n1/Project_NeRF/4DGaussians/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/spatial.o	fff3c0f5f3b44856
+6	8912	1723804084484782363	/mnt/nvme0n1/Project_NeRF/GVC/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/simple_knn.o	4fd06902fda96b3d
+6	20863	1723804096420974910	/mnt/nvme0n1/Project_NeRF/GVC/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/ext.o	26c82ae32e695de5
+6	38741	1723804114313267624	/mnt/nvme0n1/Project_NeRF/GVC/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/spatial.o	9d8b0873beb44f96
+25	8756	1725861954622861306	/mnt/nvme0n1/Project_NeRF/GVC/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/simple_knn.o	56e52afa13f7fb54
+25	14135	1725861959990983834	/mnt/nvme0n1/Project_NeRF/GVC/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/ext.o	6b8f0857c7f9a254
+26	33285	1725861979151421940	/mnt/nvme0n1/Project_NeRF/GVC/submodules/simple-knn/build/temp.linux-x86_64-cpython-37/spatial.o	df181ae4703ef558

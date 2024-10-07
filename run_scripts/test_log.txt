@@ -1,0 +1,22 @@
+
+- 우선 v0와 v9에 대한 파라미터 스터디 추가로 조금만 더 해보자
+  - 3개 정도 데이터셋 보고 제일 괜찮은 파라미터로 dycheck, dynerf 성능 뽑아서 일단 버전 1 성능으로 세팅
+  
+
+- 그리고 scaling과 opacity activation 을 안에 넣었을때랑 뺐을때 
+  - neural gaussian에서 말하는 scaling과 3DGS scaling의 차이  
+     - 각각의 gaussian이 스케일을 다르게 가질 수 없다???
+     - neural gaussian 단위로 스케일 값이 다 같다???
+  - 아예 함수를 다르게 만들어서, 렌더 테스트 함수에 따라 다르게 호출하면 됨
+  - 정확히 opcatiy는 activation이 없고 neural opacity에 masking을 하고 있다
+  
+ 
+ 
+- 위에꺼 해보고 나서 v2 구현해야 함
+순서는
+coarse는 똑같다. 
+fine은 xyz와 feature, time stamp를 받아서 deform xyz와 deform feature를 출력하도록 변형하고
+
+출력된 값들로 neural gaussian generation
+
+

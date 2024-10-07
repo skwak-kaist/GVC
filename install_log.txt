@@ -1,0 +1,35 @@
+submodule/depth... 아래에서
+ext.cpp에 link 추가
+raterize_points.h 와 cu에 각각 RasterizeGaussiansfilterCUDA 함수 정의
+cuda_rasterizer > rasterizer.h에 visible filter 멤버함수 추가
+cuda_rasterizer > raterizer_impl.cu에 함수 추가
+diff_gauss / __init__.py에 visible_filter 메서드 추가
+
+
+이렇게 다 추가해서 빌드를 성공했음에도 integer multiplication overflow라는 알수없는 에러가 발생함. 뭔지 모르겠음
+    radii_pure = rasterizer.visible_filter(means3D = means3D,
+        scales = scales[:,:3],
+        rotations = rotations,
+        cov3D_precomp = cov3D_precomp)
+에서 입력값인 means3D, scales 등이 값이 바뀜. 값만 바뀌는게 아니라 속성 자체가 바뀌어서 'data'안에 torch object가 끝없이 들어있는 반복이 발생함
+means3D를 직접 슬라이싱 할 경우 CUDA error: an illegal memory access가 발생
+
+
+pytroch와 CUDA의 버전이슈?
+- 1.13.1 + cu 117 : 실행은 되지만 위와 같은 오동작 발생
+- 1.13.0 + cu 117 : 실행은 되지만 위와 같은 오동작 발생
+(pip)- 1.12.1 + cu 116 : undefined symbol 에러 발생 (raterizer에서)
+- (conda) 1.13.0 + cu 11.6: 설치 실패
+- (pip) 1.12.1+cu116: 실행은 되지만 위와 같은 오동작 발생
+
+
+pip install einops 
+pip install -e submodules/depth-diff-gaussian-rasterization
+pip install -e submodules/simple-knn
+
+
+
+
+
+
+

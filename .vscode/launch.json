@@ -1,0 +1,99 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "GVC-render-cut_roasted_beef",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/render.py",
+            "args": "--model_path output/dynerf/cut_roasted_beef --skip_train --configs arguments/dynerf/cut_roasted_beef.py --GVC_testmode 1",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        },
+        {
+            "name": "GVC-train-cut_roasted_beef",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dynerf/cut_roasted_beef --port 6018 --expname dynerf/cut_roasted_beef --configs arguments/dynerf/cut_roasted_beef.py",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        },
+        {
+            "name": "GVC-train-cut_roasted_beef-GVC2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dynerf/cut_roasted_beef --port 6018 --expname dynerf/cut_roasted_beef --configs arguments/dynerf/cut_roasted_beef.py --GVC_testmode 2",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        },
+        {
+            "name": "GVC-train-cook_spinach",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dynerf/cook_spinach --port 6018 --expname dynerf/cook_spinach --configs arguments/dynerf/cook_spinach.py",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        }, 
+        {
+            "name": "GVC-train-cook_sear_steak",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dynerf/sear_steak --port 6018 --expname dynerf/sear_steak --configs arguments/dynerf/sear_steak.py",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        }, 
+        {
+            "name": "GVC-train-dycheck-apple",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dycheck/apple --port 6018 --expname dycheck/apple --configs arguments/dycheck/default.py",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        }, 
+        {
+            "name": "GVC-train-dycheck-backpack",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dycheck/backpack --port 6018 --expname dycheck/backpack --configs arguments/dycheck/default.py",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        }
+    ]
+}

@@ -64,6 +64,7 @@ class GaussianModel:
                  add_opacity_dist : bool = False,
                  add_cov_dist : bool = False,
                  add_color_dist : bool = False, 
+                 gvc_params = None,
                  ):
         
         self.feat_dim = feat_dim
@@ -80,6 +81,11 @@ class GaussianModel:
         self.add_opacity_dist = add_opacity_dist
         self.add_cov_dist = add_cov_dist
         self.add_color_dist = add_color_dist
+
+        # GVC parameters
+        self.gvc_testmode = gvc_params["GVC_testmode"]
+        
+               
 
         self._anchor = torch.empty(0)
         self._offset = torch.empty(0)
@@ -127,12 +133,15 @@ class GaussianModel:
         self.setup_functions()
         '''
         self._xyz = torch.empty(0)
-        self._deformation = deform_network(args)
+        #self._deformation = deform_network(args)
         self._deformation_table = torch.empty(0)
 
-        # for scaffold-GS deformation (temp)
-        #self._deformation_scaffold = deform_network_scaffold(args)
-        #self._deformation_table_scaffold = torch.empty(0)
+        # for scaffold-GS deformation (s.kwak)
+        if self.gvc_testmode == 2:
+            self._deformation = deform_network_scaffold(args)
+        else:
+            self._deformation = deform_network(args)    
+                        
 
         if self.use_feat_bank:
             self.mlp_feature_bank = nn.Sequential(
@@ -193,6 +202,10 @@ class GaussianModel:
             self._xyz,
             self._deformation.state_dict(),
             self._deformation_table,
+            
+            # scafold-GS
+            
+            
             # self.grid,
             self._features_dc,
             self._features_rest,
@@ -601,7 +614,7 @@ class GaussianModel:
         return l
 
     def compute_deformation(self,time):
-        
+        # 이거 쓰임??
         deform = self._deformation[:,:,:time].sum(dim=-1)
         xyz = self._xyz + deform
         return xyz

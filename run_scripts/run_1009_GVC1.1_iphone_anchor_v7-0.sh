@@ -3,15 +3,15 @@
 eval "$(conda shell.bash hook)"
 conda activate GVC
 
-GPU_id=1
+GPU_id=0
 GVC_testmode=1
-port=6026
+port=6021
 
 #scenes="apple backpack block creeper handwavy haru-sit mochi-high-five pillow space-out spin sriracha-tree teddy wheel" 
-scenes="space-out spin sriracha-tree" 
+scenes="apple backpack block creeper handwavy haru-sit " 
 
 test_version=gvc1.1
-config=anchor_v9
+config=anchor_v7
 
 output_path=dycheck_${test_version}_${config}
 

@@ -5,8 +5,8 @@ ModelHiddenParams = dict(
      'output_coordinate_dim': 16,
      'resolution': [64, 64, 64, 150]
     },
-    multires = [1,2,4],
-#    multires = [1,2],
+#    multires = [1,2,4],
+    multires = [1,2],
     defor_depth = 1,
     net_width = 128,
     plane_tv_weight = 0.0002,
@@ -18,7 +18,7 @@ ModelHiddenParams = dict(
 
 ModelParams = dict(
     appearance_dim = 16,
-    n_offsets = 20, 
+    n_offsets = 10, 
     use_feat_bank = True, 
     #voxel_size = 0.0005,
     voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001

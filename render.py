@@ -176,6 +176,9 @@ if __name__ == "__main__":
 
     # my test args
     parser.add_argument("--GVC_testmode", type=int, default = 1)
+    parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
+    parser.add_argument("--GVC_Opacity_Activation", type=int, default = 1, help="0: default, 1: opacity activation outside")
+
 
     args = get_combined_args(parser)
     print("Rendering " , args.model_path)
@@ -191,6 +194,9 @@ if __name__ == "__main__":
     gvc_params = {}
     # append GVC testmode to gvc_params
     gvc_params["GVC_testmode"] = args.GVC_testmode
+    gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
+    gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
+
 
 
     render_sets(model.extract(args), hyperparam.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.skip_video, args.canonical_frame_render, gvc_params)

@@ -452,14 +452,14 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
         gaussians = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size, 
                                   dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor, 
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
-                                  dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist)
+                                  dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
         # print(dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist) # False, False, False
     elif gvc_params["GVC_testmode"] == 2:
     # testmode 2: initial_frame: scaffold-GS, deformation: anchor points and local context features
         gaussians = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size, 
                                   dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor, 
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
-                                  dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist)
+                                  dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
         # print(dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist) # False, False, False
     else:
         raise ValueError("Unsupported GVC testmode")
@@ -592,6 +592,8 @@ if __name__ == "__main__":
 
     # my test args
     parser.add_argument("--GVC_testmode", type=int, default = 1)
+    parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
+    parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
@@ -607,6 +609,8 @@ if __name__ == "__main__":
     # append GVC testmode to gvc_params
     
     gvc_params["GVC_testmode"] = args.GVC_testmode
+    gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
+    gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
@@ -624,6 +628,12 @@ if __name__ == "__main__":
     args.checkpoint_iterations: [] [14/09 16:19:06]
     args.start_checkpoint: None [14/09 16:19:06]
     '''
+    print("---------------------------------")
+    print("GVC_testmode: ", args.GVC_testmode)
+    print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
+    print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
+    print("---------------------------------")
+    
     
 
     training(lp.extract(args), hp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from, args.expname, gvc_params)

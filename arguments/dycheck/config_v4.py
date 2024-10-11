@@ -18,7 +18,7 @@ ModelHiddenParams = dict(
 
 ModelParams = dict(
     appearance_dim = 16,
-    n_offsets = 20, 
+    n_offsets = 10, 
     use_feat_bank = True, 
     #voxel_size = 0.0005,
     voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001

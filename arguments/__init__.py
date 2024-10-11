@@ -133,7 +133,9 @@ class ModelHiddenParams(ParamGroup):
         self.apply_rotation=False # useless
 
         # for scaffold-GS
-        
+        self.anchor_deform = True
+        self.local_context_feature_deform = True
+        self.deform_feat_dim = 32
         
         
         super().__init__(parser, "ModelHiddenParams")

@@ -9,3 +9,7 @@ plyfile
 pytorch_msssim
 open3d
 imageio[ffmpeg]
+jaxtyping
+chardet
+einops
+torch_scatter

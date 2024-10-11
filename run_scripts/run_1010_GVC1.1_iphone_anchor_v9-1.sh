@@ -5,12 +5,12 @@ conda activate GVC
 
 GPU_id=1
 GVC_testmode=1
-port=6026
+port=6022
 
 #scenes="apple backpack block creeper handwavy haru-sit mochi-high-five pillow space-out spin sriracha-tree teddy wheel" 
-scenes="space-out spin sriracha-tree" 
+scenes="handwavy haru-sit mochi-high-five" 
 
-test_version=gvc1.1
+test_version=gvc1.2
 config=anchor_v9
 
 output_path=dycheck_${test_version}_${config}

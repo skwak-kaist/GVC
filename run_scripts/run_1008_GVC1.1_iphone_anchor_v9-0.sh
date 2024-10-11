@@ -8,7 +8,7 @@ GVC_testmode=1
 port=6021
 
 #scenes="apple backpack block creeper handwavy haru-sit mochi-high-five pillow space-out spin sriracha-tree teddy wheel" 
-scenes="handwavy haru-sit mochi-high-five pillow" 
+scenes="teddy wheel" 
 
 test_version=gvc1.1
 config=anchor_v9

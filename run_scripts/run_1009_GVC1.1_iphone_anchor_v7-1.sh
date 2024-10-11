@@ -8,10 +8,10 @@ GVC_testmode=1
 port=6026
 
 #scenes="apple backpack block creeper handwavy haru-sit mochi-high-five pillow space-out spin sriracha-tree teddy wheel" 
-scenes="space-out spin sriracha-tree" 
+scenes="mochi-high-five pillow space-out spin sriracha-tree teddy wheel" 
 
 test_version=gvc1.1
-config=anchor_v9
+config=anchor_v7
 
 output_path=dycheck_${test_version}_${config}
 

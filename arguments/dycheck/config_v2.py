@@ -14,6 +14,7 @@ ModelHiddenParams = dict(
     l1_time_planes =  0.0001,
     render_process=True,
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
+    anchor_deform=False # 끔
 )
 
 ModelParams = dict(

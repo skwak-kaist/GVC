@@ -13,8 +13,15 @@ ModelHiddenParams = dict(
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
     render_process=True,
+
+    anchor_deform = True,
+    local_context_feature_deform = False,
+    grid_offsets_deform = False,
+    grid_scale_deform = False,
+    
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    local_context_feature_deform=False # 끔
+    deform_n_offsets = 20, # ModelParams의 n_offsets과 일치시켜야 함
+    
 )
 
 ModelParams = dict(

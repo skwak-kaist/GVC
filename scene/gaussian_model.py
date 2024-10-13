@@ -1195,7 +1195,7 @@ class GaussianModel:
         "opacity": new_opacities,
         "scaling" : new_scaling,
         "rotation" : new_rotation,
-        # "deformation": new_deformation
+        "deformation": new_deformation
        }
 
         optimizable_tensors = self.cat_tensors_to_optimizer(d)
@@ -1205,7 +1205,7 @@ class GaussianModel:
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
         self._rotation = optimizable_tensors["rotation"]
-        # self._deformation = optimizable_tensors["deformation"]
+        self._deformation = optimizable_tensors["deformation"]
         
         self._deformation_table = torch.cat([self._deformation_table,new_deformation_table],-1)
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")

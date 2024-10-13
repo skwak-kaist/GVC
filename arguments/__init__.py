@@ -135,7 +135,11 @@ class ModelHiddenParams(ParamGroup):
         # for scaffold-GS
         self.anchor_deform = True
         self.local_context_feature_deform = True
+        self.grid_offsets_deform = True
+        self.grid_scale_deform = True
+        
         self.deform_feat_dim = 32
+        self.deform_n_offsets = 10
         
         
         super().__init__(parser, "ModelHiddenParams")

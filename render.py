@@ -58,7 +58,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
         
         if gvc_params["GVC_testmode"] == 0:
             rendering = render_original(view, gaussians, pipeline, background, cam_type=cam_type)["render"]
-        elif gvc_params["GVC_testmode"] == 1:
+        elif gvc_params["GVC_testmode"] >= 1:
             rendering = render(gvc_params, view, gaussians, pipeline, background, cam_type=cam_type)["render"]
         else:
             raise ValueError("GVC_testmode should be 0 or 1")
@@ -100,7 +100,7 @@ def render_set_canonical(model_path, name, iteration, views, gaussians, pipeline
         
         if gvc_params["GVC_testmode"] == 0:
             rendering = render_original(view, gaussians, pipeline, background, stage="coarse", cam_type=cam_type)["render"]
-        elif gvc_params["GVC_testmode"] == 1:
+        elif gvc_params["GVC_testmode"] >= 1:
             rendering = render(gvc_params, view, gaussians, pipeline, background, stage="coarse", cam_type=cam_type)["render"]
         else:
             raise ValueError("GVC_testmode should be 0 or 1")
@@ -133,13 +133,13 @@ pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_video: bool
         if gvc_params["GVC_testmode"] == 0:
         # original 4DGS code
             gaussians = GaussianModel(dataset.sh_degree, hyperparam)
-        elif gvc_params["GVC_testmode"] == 1 or gvc_params["GVC_testmode"] == 2:
+        elif gvc_params["GVC_testmode"] >= 1:
         # testmode 1: initial_frame: scaffold-GS, others: 4DGS
         # testmode 2: initial_frame: scaffold-GS, end_frame: scaffold-GS, others: 4DGS
             gaussians = GaussianModel(hyperparam, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size, 
                                   dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor, 
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
-                                  dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist)
+                                  dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
 
 
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # my test args
     parser.add_argument("--GVC_testmode", type=int, default = 1)
     parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
-    parser.add_argument("--GVC_Opacity_Activation", type=int, default = 1, help="0: default, 1: opacity activation outside")
+    parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
 
 
     args = get_combined_args(parser)
@@ -197,6 +197,12 @@ if __name__ == "__main__":
     gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
     gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
 
-
+    print("---------------------------------")
+    print("GVC_testmode: ", args.GVC_testmode)
+    print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
+    print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
+    print("---------------------------------")
+    
+    
 
     render_sets(model.extract(args), hyperparam.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.skip_video, args.canonical_frame_render, gvc_params)

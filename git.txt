@@ -1,5 +1,4 @@
-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
-
+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
 
 https://iambeginnerdeveloper.tistory.com/256
 
@@ -15,4 +14,7 @@ git push -u origin main
 
 
 
+git stash
+
+git pull origin main
 

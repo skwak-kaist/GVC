@@ -271,8 +271,16 @@ class Deformation_scaffold(nn.Module):
             self.feature_out.append(nn.ReLU())
             self.feature_out.append(nn.Linear(self.W,self.W))
         self.feature_out = nn.Sequential(*self.feature_out)
-        self.pos_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 3))
-        self.feature_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, self.args.deform_feat_dim))
+        
+        if self.args.anchor_deform:        
+            self.pos_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 3))
+        if self.args.local_context_feature_deform:    
+            self.feature_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, self.args.deform_feat_dim))
+        if self.args.grid_offsets_deform:
+            self.grid_offsets_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, self.args.deform_n_offsets*3))
+        if self.args.grid_scale_deform:
+            self.grid_scaling_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 6))
+        
                 
         # 여기서부터 하면됨!!!! feature deform!!!       
                 
@@ -301,19 +309,19 @@ class Deformation_scaffold(nn.Module):
         return self.ratio
     
     #def forward(self, rays_pts_emb, scales_emb=None, rotations_emb=None, opacity = None,shs_emb=None, time_feature=None, time_emb=None):
-    def forward(self, rays_pts_emb, feat=None, time_emb=None, time_feature=None):
+    def forward(self, rays_pts_emb, feat=None, grid_offsets=None, grid_scaling=None, time_emb=None, time_feature=None):
         if time_emb is None:
             breakpoint()
             return self.forward_static(rays_pts_emb[:,:3])
         else:
             #return self.forward_dynamic(rays_pts_emb, scales_emb, rotations_emb, opacity, shs_emb, time_feature, time_emb)
-            return self.forward_dynamic(rays_pts_emb, feat, time_emb, time_feature)
+            return self.forward_dynamic(rays_pts_emb, feat, grid_offsets, grid_scaling, time_emb, time_feature)
 
     def forward_static(self, rays_pts_emb):
         grid_feature = self.grid(rays_pts_emb[:,:3])
         dx = self.static_mlp(grid_feature)
         return rays_pts_emb[:, :3] + dx
-    def forward_dynamic(self, rays_pts_emb, feat, time_emb, time_feature): # 수정
+    def forward_dynamic(self, rays_pts_emb, feat, grid_offsets, grid_scaling, time_emb, time_feature): # 수정
         # time 과 point를 넣고 grid feature를 가져옴
         #hidden = self.query_time(rays_pts_emb, scales_emb, rotations_emb, time_feature, time_emb) 
         hidden = self.query_time(rays_pts_emb, time_emb) # input 수정
@@ -342,9 +350,30 @@ class Deformation_scaffold(nn.Module):
             feat_deformed = feat*mask + df
         else:
             feat_deformed = feat
+            
+        if self.args.grid_offsets_deform:
+            do = self.grid_offsets_deform(hidden)
+            
+            # grid offset의 shape을 [batch, n_offsets, 3]에서 [batch, n_offsets* 3]로 변경
+            grid_offsets = grid_offsets.reshape([-1, self.args.deform_n_offsets*3])
+            grid_offsets_deformed = torch.zeros_like(grid_offsets)
+            grid_offsets_deformed = grid_offsets*mask + do
+            
+            # 다시 변경
+            grid_offsets_deformed = grid_offsets_deformed.reshape([-1, self.args.deform_n_offsets, 3])
+            
+        else:
+            grid_offsets_deformed = grid_offsets
+            
+        if self.args.grid_scale_deform:
+            ds = self.grid_scaling_deform(hidden)
+            grid_scaling_deformed = torch.zeros_like(grid_scaling)
+            grid_scaling_deformed = grid_scaling*mask + ds
+        else:
+            grid_scaling_deformed = grid_scaling
         
-        return pts, feat_deformed
-
+        
+        return pts, feat_deformed, grid_offsets_deformed, grid_scaling_deformed
     
     def get_mlp_parameters(self):
         parameter_list = []
@@ -397,9 +426,9 @@ class deform_network_scaffold(nn.Module):
         self.apply(initialize_weights)
         # print(self)
 
-    def forward(self, anchor, feat=None, times_sel=None):
+    def forward(self, anchor, feat=None, grid_offsets=None, grid_scaling=None, times_sel=None):
         #return self.forward_dynamic(point, scales, rotations, opacity, shs, times_sel)
-        return self.forward_dynamic(anchor, feat, times_sel)
+        return self.forward_dynamic(anchor, feat, grid_offsets, grid_scaling, times_sel)
     @property
     def get_aabb(self):
         
@@ -413,12 +442,12 @@ class deform_network_scaffold(nn.Module):
         return points
     
        
-    def forward_dynamic(self, anchor, feat=None, times_sel=None):
+    def forward_dynamic(self, anchor, feat=None, grid_offsets=None, grid_scaling=None, times_sel=None):
         
         point_emb = poc_fre(anchor, self.pos_poc)
         #scales_emb = poc_fre(scales,self.rotation_scaling_poc)
         #rotations_emb = poc_fre(rotations,self.rotation_scaling_poc)
-        time_emb = poc_fre(times_sel, self.time_poc)
+        time_emb = poc_fre(times_sel, self.time_poc) # times_sel: 22055, 1 --> time_emb: 22055, 9
         times_feature = self.timenet(time_emb) # 기껏 만들어놓고 안들어감    
         '''
         means3D, scales, rotations, opacity, shs = self.deformation_net( point_emb,
@@ -430,8 +459,9 @@ class deform_network_scaffold(nn.Module):
                                                 times_sel)
         '''
         # here!!
-        anchor, feat = self.deformation_net(point_emb, feat, times_sel)
-        return anchor, feat
+        anchor, feat, grid_offsets, grid_scaling = self.deformation_net(point_emb, feat, grid_offsets, grid_scaling, times_sel)
+        #anchor, feat = self.deformation_net(point_emb, feat, grid_offsets, grid_scaling, time_emb) # time positional encoding
+        return anchor, feat, grid_offsets, grid_scaling
     
     def get_mlp_parameters(self):
         return self.deformation_net.get_mlp_parameters() + list(self.timenet.parameters())

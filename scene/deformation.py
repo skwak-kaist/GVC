@@ -227,7 +227,7 @@ class deform_network(nn.Module):
 ##################################################
     
 class Deformation_scaffold(nn.Module):
-    def __init__(self, D=8, W=256, input_ch=27, input_ch_time=9, grid_pe=0, skips=[], args=None):
+    def __init__(self, D=8, W=256, input_ch=27, input_ch_time=9, grid_pe=0, skips=[], args=None, gvc_params=None):
         super(Deformation_scaffold, self).__init__()
         self.D = D
         self.W = W
@@ -245,8 +245,13 @@ class Deformation_scaffold(nn.Module):
         if self.args.static_mlp:
             self.static_mlp = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 1))
         
+        self.gvc_dynamics = gvc_params["GVC_Dynamics"]
+        
         self.ratio=0
         self.create_net()
+        
+        
+        
     @property
     def get_aabb(self):
         return self.grid.get_aabb
@@ -281,7 +286,18 @@ class Deformation_scaffold(nn.Module):
         if self.args.grid_scale_deform:
             self.grid_scaling_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 6))
         
+        ### dynamics !!! ###
+        if self.gvc_dynamics != 0:
+            if self.args.dynamics_activation == "relu":
+                self.dynamics_activation = nn.ReLU()
+            elif self.args.dynamics_activation == "tanh":
+                self.dynamics_activation = nn.Tanh()
+            elif self.args.dynamics_activation == "sigmoid":
+                self.dynamics_activation = nn.Sigmoid()
+            else:
+                assert False, "Invalid dynamics activation function"
                 
+                       
         # 여기서부터 하면됨!!!! feature deform!!!       
                 
         #self.scales_deform = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 3))
@@ -309,19 +325,19 @@ class Deformation_scaffold(nn.Module):
         return self.ratio
     
     #def forward(self, rays_pts_emb, scales_emb=None, rotations_emb=None, opacity = None,shs_emb=None, time_feature=None, time_emb=None):
-    def forward(self, rays_pts_emb, feat=None, grid_offsets=None, grid_scaling=None, time_emb=None, time_feature=None):
+    def forward(self, rays_pts_emb, feat=None, grid_offsets=None, grid_scaling=None, dynamics=None, time_emb=None, time_feature=None):
         if time_emb is None:
             breakpoint()
             return self.forward_static(rays_pts_emb[:,:3])
         else:
             #return self.forward_dynamic(rays_pts_emb, scales_emb, rotations_emb, opacity, shs_emb, time_feature, time_emb)
-            return self.forward_dynamic(rays_pts_emb, feat, grid_offsets, grid_scaling, time_emb, time_feature)
+            return self.forward_dynamic(rays_pts_emb, feat, grid_offsets, grid_scaling, dynamics, time_emb, time_feature)
 
     def forward_static(self, rays_pts_emb):
         grid_feature = self.grid(rays_pts_emb[:,:3])
         dx = self.static_mlp(grid_feature)
         return rays_pts_emb[:, :3] + dx
-    def forward_dynamic(self, rays_pts_emb, feat, grid_offsets, grid_scaling, time_emb, time_feature): # 수정
+    def forward_dynamic(self, rays_pts_emb, feat, grid_offsets, grid_scaling, dynamics, time_emb, time_feature): # 수정
         # time 과 point를 넣고 grid feature를 가져옴
         #hidden = self.query_time(rays_pts_emb, scales_emb, rotations_emb, time_feature, time_emb) 
         hidden = self.query_time(rays_pts_emb, time_emb) # input 수정
@@ -333,12 +349,20 @@ class Deformation_scaffold(nn.Module):
             mask = self.empty_voxel(rays_pts_emb[:,:3])
         else:
             mask = torch.ones_like(rays_pts_emb[:,0]).unsqueeze(-1) # 수정
-            
+        
+        # dynamics activation
+        if self.gvc_dynamics != 0:
+            dynamics = self.dynamics_activation(dynamics)
+                    
         # breakpoint()
         # 실제적인 deformation이 일어나는 부분
         
         if self.args.anchor_deform:
             dx = self.pos_deform(hidden)
+            
+            if self.gvc_dynamics == 1 or self.gvc_dynamics == 2 or self.gvc_dynamics == 5 or self.gvc_dynamics == 6:
+                dx = dx * dynamics
+            
             pts = torch.zeros_like(rays_pts_emb[:,:3])
             pts = rays_pts_emb[:,:3]*mask + dx
         else:
@@ -346,6 +370,10 @@ class Deformation_scaffold(nn.Module):
             
         if self.args.local_context_feature_deform:    
             df = self.feature_deform(hidden)
+            
+            if self.gvc_dynamics == 3 or self.gvc_dynamics == 5:
+                df = df * dynamics
+            
             feat_deformed = torch.zeros_like(feat)
             feat_deformed = feat*mask + df
         else:
@@ -354,10 +382,13 @@ class Deformation_scaffold(nn.Module):
         if self.args.grid_offsets_deform:
             do = self.grid_offsets_deform(hidden)
             
+            if self.gvc_dynamics == 4 or self.gvc_dynamics == 6:
+                do = do * dynamics
+            
             # grid offset의 shape을 [batch, n_offsets, 3]에서 [batch, n_offsets* 3]로 변경
             grid_offsets = grid_offsets.reshape([-1, self.args.deform_n_offsets*3])
             grid_offsets_deformed = torch.zeros_like(grid_offsets)
-            grid_offsets_deformed = grid_offsets*mask + do
+            grid_offsets_deformed = grid_offsets * mask + do
             
             # 다시 변경
             grid_offsets_deformed = grid_offsets_deformed.reshape([-1, self.args.deform_n_offsets, 3])
@@ -390,7 +421,7 @@ class Deformation_scaffold(nn.Module):
 
 
 class deform_network_scaffold(nn.Module):
-    def __init__(self, args) :
+    def __init__(self, args, gvc_params=None) :
         super(deform_network_scaffold, self).__init__()
         net_width = args.net_width
         timebase_pe = args.timebase_pe
@@ -416,7 +447,8 @@ class deform_network_scaffold(nn.Module):
                                                     input_ch=(3)+(3*(posbase_pe))*2, 
                                                     grid_pe=grid_pe, 
                                                     input_ch_time=timenet_output, 
-                                                    args=args)
+                                                    args=args,
+                                                    gvc_params=gvc_params)
         
         
         self.register_buffer('time_poc', torch.FloatTensor([(2**i) for i in range(timebase_pe)]))
@@ -426,9 +458,9 @@ class deform_network_scaffold(nn.Module):
         self.apply(initialize_weights)
         # print(self)
 
-    def forward(self, anchor, feat=None, grid_offsets=None, grid_scaling=None, times_sel=None):
+    def forward(self, anchor, feat=None, grid_offsets=None, grid_scaling=None, dynamics=None, times_sel=None):
         #return self.forward_dynamic(point, scales, rotations, opacity, shs, times_sel)
-        return self.forward_dynamic(anchor, feat, grid_offsets, grid_scaling, times_sel)
+        return self.forward_dynamic(anchor, feat, grid_offsets, grid_scaling, dynamics, times_sel)
     @property
     def get_aabb(self):
         
@@ -442,7 +474,7 @@ class deform_network_scaffold(nn.Module):
         return points
     
        
-    def forward_dynamic(self, anchor, feat=None, grid_offsets=None, grid_scaling=None, times_sel=None):
+    def forward_dynamic(self, anchor, feat=None, grid_offsets=None, grid_scaling=None, dynamics=None, times_sel=None):
         
         point_emb = poc_fre(anchor, self.pos_poc)
         #scales_emb = poc_fre(scales,self.rotation_scaling_poc)
@@ -459,7 +491,7 @@ class deform_network_scaffold(nn.Module):
                                                 times_sel)
         '''
         # here!!
-        anchor, feat, grid_offsets, grid_scaling = self.deformation_net(point_emb, feat, grid_offsets, grid_scaling, times_sel)
+        anchor, feat, grid_offsets, grid_scaling = self.deformation_net(point_emb, feat, grid_offsets, grid_scaling, dynamics, times_sel)
         #anchor, feat = self.deformation_net(point_emb, feat, grid_offsets, grid_scaling, time_emb) # time positional encoding
         return anchor, feat, grid_offsets, grid_scaling
     

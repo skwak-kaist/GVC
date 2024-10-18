@@ -16,17 +16,13 @@ import subprocess
 cmd = 'nvidia-smi -q -d Memory |grep -A4 GPU|grep Used'
 result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE).stdout.decode().split('\n')
 os.environ['CUDA_VISIBLE_DEVICES']=str(np.argmin([int(x.split()[2]) for x in result[:-1]]))
-
 os.system('echo $CUDA_VISIBLE_DEVICES')
 
-
 import torch
-
 torch.multiprocessing.set_sharing_strategy('file_system')
-
 from random import randint
 from utils.loss_utils import l1_loss, ssim, l2_loss, lpips_loss
-from gaussian_renderer import prefilter_voxel, render, render_original, network_gui
+from gaussian_renderer import prefilter_voxel, render, render_original, render_test3, network_gui
 import sys
 from scene import Scene, GaussianModel
 from utils.general_utils import safe_state
@@ -39,7 +35,7 @@ from torch.utils.data import DataLoader
 from utils.timer import Timer
 from utils.loader_utils import FineSampler, get_stamp_list
 import lpips
-from utils.scene_utils import render_training_image
+from utils.scene_utils import render_training_image, render_training_image_v3
 from time import time
 import copy
 
@@ -89,12 +85,12 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
 
 
     if not viewpoint_stack and not opt.dataloader:
-        # viewpoint stack이 없고 dataloader가 없다면
+        # viewpoint stack이 없고 dataloader가 없다면 
         # dnerf's branch
         # dynerf는 이거 안 탐
         viewpoint_stack = [i for i in train_cams]
         temp_list = copy.deepcopy(viewpoint_stack)
-    # 
+    
     batch_size = opt.batch_size
     print("data loading done")
     if opt.dataloader:
@@ -107,7 +103,6 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         else:
             # dynerf's branch
             viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=batch_size,shuffle=True,num_workers=16,collate_fn=list)
-            #viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=batch_size,shuffle=True,num_workers=0,collate_fn=list)
             random_loader = True
         loader = iter(viewpoint_stack_loader)
     
@@ -216,7 +211,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 """
                 pre-filtering voxel
                 """
-            
+
                 voxel_visible_mask = prefilter_voxel(viewpoint_cam, gaussians, pipe, background)
                 #voxel_visible_mask=None
                 #print(f"voxel_visible_mask: {voxel_visible_mask.sum()}")
@@ -307,12 +302,6 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         if opt.lambda_dssim != 0:
             ssim_loss = ssim(image_tensor,gt_image_tensor)
             loss += opt.lambda_dssim * (1.0-ssim_loss)
-            
-        if stage == "fine" and gvc_params["GVC_Dynamics"] != 0:
-            if opt.dynamics_loss == "entropy":
-                dynamics_loss = gaussians.compute_dynamics_entropy_loss(hyper.dynamics_loss_weight)
-                loss += dynamics_loss
-            
         # if opt.lambda_lpips !=0:
         #     lpipsloss = lpips_loss(image_tensor,gt_image_tensor,lpips_model)
         #     loss += opt.lambda_lpips * lpipsloss
@@ -357,7 +346,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 training_report(tb_writer, iteration, Ll1, loss, 
                 l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, 
                 scene, render, [pipe, background], stage, scene.dataset_type)
-            elif gvc_params["GVC_testmode"] >= 1:
+            elif gvc_params["GVC_testmode"] == 1:
                 training_report(tb_writer, iteration, Ll1, loss, 
                 l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, 
                 scene, render, [pipe, background], stage, scene.dataset_type, gvc_params)
@@ -444,6 +433,225 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             if (iteration in checkpoint_iterations):
                 print("\n[ITER {}] Saving Checkpoint".format(iteration))
                 torch.save((gaussians.capture(), iteration), scene.model_path + "/chkpnt" +f"_{stage}_" + str(iteration) + ".pth")
+                
+### scene_reconstruction 함수 끝 ###
+### scene_reconstruction_v3 함수 시작 ###
+
+def scene_reconstruction_v3(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                            checkpoint_iterations, checkpoint, debug_from,
+                            gaussians_static, gaussians_dynamic, scene, stage, tb_writer, train_iter, timer, gvc_params):
+    
+    first_iter = 0
+    
+    gaussians_static.training_setup(opt)
+    gaussians_dynamic.training_setup(opt)
+    
+    if checkpoint:
+        if stage == "coarse" and stage not in checkpoint:
+            print("start from fine stage, skip coarse stage.")
+            # process is in the coarse stage, but start from fine stage
+            return
+        if stage in checkpoint: 
+            (model_params, first_iter) = torch.load(checkpoint)
+            gaussians_static.restore(model_params, opt)
+            gaussians_dynamic.restore(model_params, opt)
+            
+    bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
+    background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+    
+    iter_start = torch.cuda.Event(enable_timing = True)
+    iter_end = torch.cuda.Event(enable_timing = True)
+    
+    viewpoint_stack = None
+    ema_loss_for_log = 0.0
+    ema_psnr_for_log = 0.0
+    
+    final_iter = train_iter
+    
+    progress_bar = tqdm(range(first_iter, final_iter), desc="Training progress")
+    first_iter += 1
+    video_cams = scene.getVideoCameras()
+    test_cams = scene.getTestCameras()
+    train_cams = scene.getTrainCameras()
+    
+    if not viewpoint_stack and not opt.dataloader:
+        viewpoint_stack = [i for i in train_cams]
+        temp_list = copy.deepcopy(viewpoint_stack)
+    batch_size = opt.batch_size
+    print("data loading done")
+    if opt.dataloader:
+        viewpoint_stack = scene.getTrainCameras()
+        if opt.custom_sampler is not None:
+            sampler = FineSampler(viewpoint_stack)
+            viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=batch_size,sampler=sampler,num_workers=16,collate_fn=list)
+            random_loader = False
+        else:
+            viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=batch_size,shuffle=True,num_workers=16,collate_fn=list)
+            random_loader = True
+        loader = iter(viewpoint_stack_loader)
+        
+    if stage == "coarse" and opt.zerostamp_init:
+        load_in_memory = True
+        temp_list = get_stamp_list(viewpoint_stack,0)
+        viewpoint_stack = temp_list.copy()
+    else:
+        load_in_memory = False
+        
+    count = 0
+    for iteration in range(first_iter, final_iter+1):
+        if network_gui.conn == None:
+            network_gui.try_connect()
+        while network_gui.conn != None:
+            try:
+                net_image_bytes = None
+                custom_cam, do_training, pipe.convert_SHs_python, pipe.compute_cov3D_python, keep_alive, scaling_modifer = network_gui.receive()
+                if custom_cam != None:
+                    count +=1
+                    viewpoint_index = (count ) % len(video_cams)
+                    if (count //(len(video_cams))) % 2 == 0:
+                        viewpoint_index = viewpoint_index
+                    else:
+                        viewpoint_index = len(video_cams) - viewpoint_index - 1
+                    viewpoint = video_cams[viewpoint_index]
+                    custom_cam.time = viewpoint.time
+                    # 여기 static으로만 되어있는데 일단 try 문을 안타서 괜찮음. 나중에 dynamic도 추가해야 함
+                    net_image = render(custom_cam, gaussians_static, pipe, background, scaling_modifer, stage=stage, cam_type=scene.dataset_type)["render"]
+                    net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
+                network_gui.send(net_image_bytes, dataset.source_path)
+                if do_training and ((iteration < int(opt.iterations)) or not keep_alive) :
+                    break
+            except Exception as e:
+                print(e)
+                network_gui.conn = None
+
+        iter_start.record()
+        
+        gaussians_static.update_learning_rate(iteration)
+        gaussians_dynamic.update_learning_rate(iteration)
+        
+        # Pick a random Camera
+        if opt.dataloader and not load_in_memory:
+            try:
+                viewpoint_cams = next(loader)
+            except StopIteration:
+                print("reset dataloader into random dataloader.")
+                if not random_loader:
+                    viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=opt.batch_size,shuffle=True,num_workers=16,collate_fn=list)
+                    random_loader = True
+                loader = iter(viewpoint_stack_loader)
+        else:
+            idx = 0
+            viewpoint_cams = []
+            while idx < batch_size :    
+                viewpoint_cam = viewpoint_stack.pop(randint(0,len(viewpoint_stack)-1))
+                if not viewpoint_stack :
+                    viewpoint_stack =  temp_list.copy()
+                viewpoint_cams.append(viewpoint_cam)
+                idx +=1
+            if len(viewpoint_cams) == 0:
+                continue
+            
+        # Render
+        if (iteration - 1) == debug_from:
+            pipe.debug = True
+        images = []
+        gt_images = []
+        radii_list = []
+        visibility_filter_list = []
+        viewspace_point_tensor_list = []
+        
+        for viewpoint_cam in viewpoint_cams:
+            
+            voxel_visible_mask_static = prefilter_voxel(viewpoint_cam, gaussians_static, pipe, background)
+            voxel_visible_mask_dynamic = prefilter_voxel(viewpoint_cam, gaussians_dynamic, pipe, background)
+                        
+            retain_grad = (iteration < opt.update_until and iteration >= 0) 
+
+            render_pkg = render_test3(gvc_params, viewpoint_cam, pc_static=gaussians_static, 
+                                      pc_dynamic=gaussians_dynamic, pipe=pipe, 
+                                    bg_color=background, stage=stage,cam_type=scene.dataset_type, 
+                                    visible_mask_static=voxel_visible_mask_static, 
+                                    visible_mask_dynamic=voxel_visible_mask_dynamic,
+                                    retain_grad=retain_grad)
+                
+            image, viewspace_point_tensor, visibility_filter, offset_selection_mask, radii, scaling, opacity \
+                = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], \
+                    render_pkg["selection_mask"], render_pkg["radii"], render_pkg["scaling"], render_pkg["neural_opacity"]
+            
+            images.append(image.unsqueeze(0))
+            if scene.dataset_type!="PanopticSports":
+                gt_image = viewpoint_cam.original_image.cuda()
+            else:
+                gt_image  = viewpoint_cam['image'].cuda()
+            gt_images.append(gt_image.unsqueeze(0))
+            radii_list.append(radii.unsqueeze(0))
+            visibility_filter_list.append(visibility_filter.unsqueeze(0))
+            viewspace_point_tensor_list.append(viewspace_point_tensor)
+            
+        image_tensor = torch.cat(images,0)
+        gt_image_tensor = torch.cat(gt_images,0)
+        
+        Ll1 = l1_loss(image_tensor, gt_image_tensor[:,:3,:,:])
+        psnr_ = psnr(image_tensor, gt_image_tensor).mean().double()
+        
+        loss = Ll1
+        if stage == "fine" and hyper.time_smoothness_weight != 0:
+            tv_loss = gaussians_static.compute_regulation(hyper.time_smoothness_weight, hyper.l1_time_planes, hyper.plane_tv_weight)
+            loss += tv_loss
+        if opt.lambda_dssim != 0:
+            ssim_loss = ssim(image_tensor,gt_image_tensor)
+            loss += opt.lambda_dssim * (1.0-ssim_loss)
+            
+        loss.backward()
+        
+        min_len = min([radii.shape[1] for radii in radii_list])
+        
+        if torch.isnan(loss).any():
+            print("loss is nan,end training, reexecv program now.")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+            
+        viewspace_point_tensor_grad = torch.zeros([min_len, 3], device="cuda")
+        
+        for idx in range(0, len(viewspace_point_tensor_list)):
+            viewspace_point_tensor_grad = viewspace_point_tensor_grad + viewspace_point_tensor_list[idx].grad[:min_len]
+            
+        iter_end.record()
+        
+        with torch.no_grad():
+            ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
+            ema_psnr_for_log = 0.4 * psnr_ + 0.6 * ema_psnr_for_log
+            total_point = gaussians_static._xyz.shape[0]
+            if iteration % 10 == 0:
+                progress_bar.set_postfix({"Loss": f"{ema_loss_for_log:.{7}f}",
+                                          "psnr": f"{psnr_:.{2}f}",
+                                          "point":f"{total_point}"})
+                progress_bar.update(10)
+            if iteration == opt.iterations:
+                progress_bar.close()
+                
+            timer.pause()
+            training_report(tb_writer, iteration, Ll1, loss, 
+                            l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, 
+                            scene, render, [pipe, background], stage, scene.dataset_type, gvc_params)
+            
+            if (iteration in saving_iterations):
+                print("\n[ITER {}] Saving Gaussians".format(iteration))
+                scene.save(iteration, stage)
+            if dataset.render_process:
+                if (iteration < 1000 and iteration % 10 == 9) \
+                    or (iteration < 3000 and iteration % 50 == 49) \
+                        or (iteration < 60000 and iteration %  100 == 99) :
+                        render_training_image_v3(scene, gaussians_static, gaussians_dynamic, [test_cams[iteration%len(test_cams)]], 
+                                                 render_test3, pipe, background, 
+                                                stage+"test", 
+                                                iteration,timer.get_elapsed_time(),scene.dataset_type, gvc_params)
+                        render_training_image_v3(scene, gaussians_static, gaussians_dynamic, [train_cams[iteration%len(train_cams)]], 
+                                                 render_test3, pipe, background, 
+                                                stage+"train", 
+                                                iteration,timer.get_elapsed_time(),scene.dataset_type, gvc_params)
+            
+                
+                
 def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from, expname, gvc_params):
     # first_iter = 0
     tb_writer = prepare_output_and_logger(expname)
@@ -460,29 +668,57 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
                                   dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
         # print(dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist) # False, False, False
-    elif gvc_params["GVC_testmode"] == 2 or gvc_params["GVC_testmode"] == 3: 
+    elif gvc_params["GVC_testmode"] == 2:
     # testmode 2: initial_frame: scaffold-GS, deformation: anchor points and local context features
         gaussians = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size, 
                                   dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor, 
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
                                   dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
         # print(dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist) # False, False, False
+    elif gvc_params["GVC_testmode"] == 3:
+    # testmode 3: testmode 2 + static/dynamic disentalnglement
+        gaussians_static = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size,
+                                            dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor,
+                                            dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio,
+                                            dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params, 
+                                            static_dynamic="static")
+        gaussians_dynamic = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size_dynamic,
+                                            dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor,
+                                            dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio,
+                                            dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params,
+                                            dataset.dynamic_points_ratio, static_dynamic="dynamic", )
+    
     else:
         raise ValueError("Unsupported GVC testmode")
 
-    dataset.model_path = args.model_path
-    timer = Timer()
-    scene = Scene(dataset, gaussians, load_coarse=None)
-    # scene is a class that contains attributes and method: gaussians, dataset, save, load, getTrainCameras, getTestCameras, getVideo
-    timer.start()
-    # 기본적인 instance 생성 및 변수 할당 후, scene_reconstruction 함수를 coarse, fine stage에 대해 각각 1번씩 실행
-    scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
-                             checkpoint_iterations, checkpoint, debug_from,
-                             gaussians, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)
+    if gvc_params["GVC_testmode"] <= 2:
+        dataset.model_path = args.model_path
+        timer = Timer()
+        scene = Scene(dataset, gaussians, load_coarse=None)
+        # scene is a class that contains attributes and method: gaussians, dataset, save, load, getTrainCameras, getTestCameras, getVideo
+        timer.start()
+        # 기본적인 instance 생성 및 변수 할당 후, scene_reconstruction 함수를 coarse, fine stage에 대해 각각 1번씩 실행
+        scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                                checkpoint_iterations, checkpoint, debug_from,
+                                gaussians, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)
 
-    scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
-                         checkpoint_iterations, checkpoint, debug_from,
-                         gaussians, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)
+        scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                            checkpoint_iterations, checkpoint, debug_from,
+                            gaussians, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)
+    elif gvc_params["GVC_testmode"] == 3:
+        dataset.model_path = args.model_path
+        timer = Timer()
+        scene = Scene(dataset, gaussians_static, load_coarse=None)
+        scene_dynamic = Scene(dataset, gaussians_dynamic, load_coarse=None)
+        
+        timer.start()
+        scene_reconstruction_v3(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                                checkpoint_iterations, checkpoint, debug_from,
+                                gaussians_static, gaussians_dynamic, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)
+
+        scene_reconstruction_v3(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                            checkpoint_iterations, checkpoint, debug_from,
+                            gaussians_dynamic, gaussians_dynamic, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)
 
 def prepare_output_and_logger(expname):    
     if not args.model_path:
@@ -531,7 +767,7 @@ testing_iterations, scene : Scene, renderFunc, renderArgs, stage, dataset_type, 
                     if gvc_params["GVC_testmode"] == 0:
                         image = torch.clamp(renderFunc(viewpoint, 
                         scene.gaussians,stage=stage, cam_type=dataset_type, *renderArgs)["render"], 0.0, 1.0)
-                    elif gvc_params["GVC_testmode"] >= 1:
+                    elif gvc_params["GVC_testmode"] == 1:
                         image = torch.clamp(renderFunc(gvc_params, viewpoint, 
                         scene.gaussians,stage=stage, cam_type=dataset_type, *renderArgs)["render"], 0.0, 1.0)
                     else:
@@ -600,7 +836,6 @@ if __name__ == "__main__":
     parser.add_argument("--GVC_testmode", type=int, default = 1)
     parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
     parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
-    parser.add_argument("--GVC_Dynamics", type=int, default = 1, help="0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset")
 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
@@ -618,7 +853,6 @@ if __name__ == "__main__":
     gvc_params["GVC_testmode"] = args.GVC_testmode
     gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
     gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
-    gvc_params["GVC_Dynamics"] = args.GVC_Dynamics
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
@@ -640,7 +874,6 @@ if __name__ == "__main__":
     print("GVC_testmode: ", args.GVC_testmode)
     print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
     print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
-    print("GVC_Dynamics: ", args.GVC_Dynamics)
     print("---------------------------------")
     
     

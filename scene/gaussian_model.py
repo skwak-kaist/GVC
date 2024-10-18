@@ -84,12 +84,16 @@ class GaussianModel:
 
         # GVC parameters
         self.gvc_testmode = gvc_params["GVC_testmode"]
+        self.gvc_dynamics = gvc_params["GVC_Dynamics"]
         
                
 
         self._anchor = torch.empty(0)
         self._offset = torch.empty(0)
         self._anchor_feat = torch.empty(0)
+        
+        if self.gvc_dynamics != 0:
+            self._dynamics = torch.empty(0)
         
         self.opacity_accum = torch.empty(0)
 
@@ -137,8 +141,8 @@ class GaussianModel:
         self._deformation_table = torch.empty(0)
 
         # for scaffold-GS deformation (s.kwak)
-        if self.gvc_testmode == 2:
-            self._deformation = deform_network_scaffold(args)
+        if self.gvc_testmode >= 2:
+            self._deformation = deform_network_scaffold(args, gvc_params)
         else:
             self._deformation = deform_network(args)    
                         
@@ -370,6 +374,11 @@ class GaussianModel:
         offsets = torch.zeros((fused_point_cloud.shape[0], self.n_offsets, 3)).float().cuda()
         anchors_feat = torch.zeros((fused_point_cloud.shape[0], self.feat_dim)).float().cuda()
         
+        # gvc mode 3
+        if self.gvc_dynamics != 0:
+            dynamics = torch.zeros((fused_point_cloud.shape[0], 1)).float().cuda()
+            self._dynamics = nn.Parameter(dynamics.requires_grad_(True))
+        
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
         dist2 = torch.clamp_min(distCUDA2(fused_point_cloud).float().cuda(), 0.0000001)
@@ -441,44 +450,88 @@ class GaussianModel:
         
         
         if self.use_feat_bank:
-            l = [
-                {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
-                {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
-                {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
-                {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-                {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-                {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
-                
-                {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
-                {'params': self.mlp_feature_bank.parameters(), 'lr': training_args.mlp_featurebank_lr_init, "name": "mlp_featurebank"},
-                {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
-                {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
-                {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+            if self.gvc_dynamics: 
+                l = [
+                    {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                    {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                    {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                    {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                    {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                    {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+                    
+                    {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                    {'params': self.mlp_feature_bank.parameters(), 'lr': training_args.mlp_featurebank_lr_init, "name": "mlp_featurebank"},
+                    {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                    {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                    {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
 
-                # 4DGS-related attributes
-                #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-                {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
-                {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},
-            ]
+                    # 4DGS-related attributes
+                    #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+                    {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
+                    {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},    
+                    {'params': [self._dynamics], 'lr': training_args.dynamics_lr_init, "name": "dynamics"},
+                    ]
+            
+            else:
+                l = [
+                    {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                    {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                    {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                    {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                    {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                    {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+                    
+                    {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                    {'params': self.mlp_feature_bank.parameters(), 'lr': training_args.mlp_featurebank_lr_init, "name": "mlp_featurebank"},
+                    {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                    {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                    {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+
+                    # 4DGS-related attributes
+                    #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+                    {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
+                    {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},    
+                    ]
         elif self.appearance_dim > 0:
-            l = [
-                {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
-                {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
-                {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
-                {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-                {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-                {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+            if self.gvc_dynamics: 
+                l = [
+                    {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                    {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                    {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                    {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                    {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                    {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
 
-                {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
-                {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
-                {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
-                {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+                    {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                    {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                    {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                    {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
 
-                # 4DGS-related attributes
-                #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-                {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
-                {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},
-            ]
+                    # 4DGS-related attributes
+                    #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+                    {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
+                    {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},
+                    {'params': [self._dynamics], 'lr': training_args.dynamics_lr_init, "name": "dynamics"},          
+                    ]
+            else: 
+                l = [
+                    {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                    {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                    {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                    {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                    {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                    {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+
+                    {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                    {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                    {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                    {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+
+                    # 4DGS-related attributes
+                    #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+                    {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
+                    {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},
+                    ]
         else:
             l = [
                 {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
@@ -496,6 +549,8 @@ class GaussianModel:
                 #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
                 {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
                 {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},
+               
+
             ]
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
@@ -611,6 +666,10 @@ class GaussianModel:
             l.append('scale_{}'.format(i))
         for i in range(self._rotation.shape[1]):
             l.append('rot_{}'.format(i))
+        
+        if self.gvc_dynamics != 0:
+            l.append('dynamics')
+            
         return l
 
     def compute_deformation(self,time):
@@ -669,10 +728,17 @@ class GaussianModel:
         scale = self._scaling.detach().cpu().numpy()
         rotation = self._rotation.detach().cpu().numpy()
 
+        if self.gvc_dynamics != 0:
+            dynamics = self._dynamics.detach().cpu().numpy()
+
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(anchor.shape[0], dtype=dtype_full)
-        attributes = np.concatenate((anchor, normals, offset, anchor_feat, opacities, scale, rotation), axis=1)
+        
+        if self.gvc_dynamics != 0:
+            attributes = np.concatenate((anchor, normals, offset, anchor_feat, opacities, scale, rotation, dynamics), axis=1)
+        else:
+            attributes = np.concatenate((anchor, normals, offset, anchor_feat, opacities, scale, rotation), axis=1)
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
@@ -718,6 +784,12 @@ class GaussianModel:
         for idx, attr_name in enumerate(offset_names):
             offsets[:, idx] = np.asarray(plydata.elements[0][attr_name]).astype(np.float32)
         offsets = offsets.reshape((offsets.shape[0], 3, -1))
+        
+        # dynamics
+        if self.gvc_dynamics != 0:
+            dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
+            self._dynamics = nn.Parameter(torch.tensor(dynamics, dtype=torch.float, device="cuda").requires_grad_(True))
+        
         
         self._anchor_feat = nn.Parameter(torch.tensor(anchor_feats, dtype=torch.float, device="cuda").requires_grad_(True))
 
@@ -892,6 +964,9 @@ class GaussianModel:
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
         self._rotation = optimizable_tensors["rotation"]
+        
+        if self.gvc_dynamics != 0:
+            self._dynamics = optimizable_tensors["dynamics"]
 
     # Scaffold-GS
     def anchor_growing(self, grads, threshold, offset_mask):
@@ -956,6 +1031,8 @@ class GaussianModel:
                 new_rotation[:,0] = 1.0
 
                 new_opacities = inverse_sigmoid(0.1 * torch.ones((candidate_anchor.shape[0], 1), dtype=torch.float, device="cuda"))
+                
+                
 
                 new_feat = self._anchor_feat.unsqueeze(dim=1).repeat([1, self.n_offsets, 1]).view([-1, self.feat_dim])[candidate_mask]
 
@@ -963,15 +1040,30 @@ class GaussianModel:
 
                 new_offsets = torch.zeros_like(candidate_anchor).unsqueeze(dim=1).repeat([1,self.n_offsets,1]).float().cuda()
 
-                d = {
-                    "anchor": candidate_anchor,
-                    "scaling": new_scaling,
-                    "rotation": new_rotation,
-                    "anchor_feat": new_feat,
-                    "offset": new_offsets,
-                    "opacity": new_opacities,
-                }
                 
+                if self.gvc_dynamics != 0:
+                    new_dynamics = torch.zeros([candidate_anchor.shape[0], 1], device=candidate_anchor.device).float()
+                    
+                    d = {
+                        "anchor": candidate_anchor,
+                        "scaling": new_scaling,
+                        "rotation": new_rotation,
+                        "anchor_feat": new_feat,
+                        "offset": new_offsets,
+                        "opacity": new_opacities,
+                        "dynamics": new_dynamics
+                    }
+                
+                else:
+                    d = {
+                        "anchor": candidate_anchor,
+                        "scaling": new_scaling,
+                        "rotation": new_rotation,
+                        "anchor_feat": new_feat,
+                        "offset": new_offsets,
+                        "opacity": new_opacities,
+                    }
+                    
 
                 temp_anchor_demon = torch.cat([self.anchor_demon, torch.zeros([new_opacities.shape[0], 1], device='cuda').float()], dim=0)
                 del self.anchor_demon
@@ -991,6 +1083,8 @@ class GaussianModel:
                 self._offset = optimizable_tensors["offset"]
                 self._opacity = optimizable_tensors["opacity"]
                 
+                if self.gvc_dynamics != 0:
+                    self._dynamics = optimizable_tensors["dynamics"]
 
 
     def adjust_anchor(self, check_interval=100, success_threshold=0.8, grad_threshold=0.0002, min_opacity=0.005):
@@ -1374,5 +1468,11 @@ class GaussianModel:
             for grid_id in spatiotemporal_grids:
                 total += torch.abs(1 - grids[grid_id]).mean()
         return total
+    def _dynamics_entropy_loss(self):
+        return torch.sum(-self._dynamics * torch.log(self._dynamics + 1e-6))/self._dynamics.shape[0]
+    
     def compute_regulation(self, time_smoothness_weight, l1_time_planes_weight, plane_tv_weight):
         return plane_tv_weight * self._plane_regulation() + time_smoothness_weight * self._time_regulation() + l1_time_planes_weight * self._l1_regulation()
+    
+    def compute_dynamics_entropy_loss(self, dynamics_weight):
+        return dynamics_weight * self._dynamics_entropy_loss()

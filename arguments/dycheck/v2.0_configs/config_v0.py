@@ -4,10 +4,9 @@ ModelHiddenParams = dict(
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
      'resolution': [64, 64, 64, 150]
-     #'resolution': [32, 32, 32, 150]
     },
-#    multires = [1,2,4],
-    multires = [1,2],
+    multires = [1,2,4],
+#    multires = [1,2],
     defor_depth = 1,
     net_width = 128,
     plane_tv_weight = 0.0002,
@@ -15,22 +14,19 @@ ModelHiddenParams = dict(
     l1_time_planes =  0.0001,
     render_process=True,
         
-    anchor_deform = False,
+    anchor_deform = True,
     local_context_feature_deform = True,
-    grid_offsets_deform = True,
-    grid_scale_deform = True,
+    grid_offsets_deform = False,
+    grid_scale_deform = False,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함
-    
-    dynamics_activation = "sigmoid"
-    
+    deform_n_offsets = 20, # ModelParams의 n_offsets과 일치시켜야 함
 )
 
 ModelParams = dict(
     appearance_dim = 16,
-    n_offsets = 10, 
-    use_feat_bank = False, 
+    n_offsets = 20, 
+    use_feat_bank = True, 
     #voxel_size = 0.0005,
     voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함

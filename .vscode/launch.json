@@ -108,5 +108,18 @@
                 "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
             }
         }, 
+        {
+            "name": "GVC3.0-train-dycheck-apple",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/dycheck/apple --port 6018 --expname dycheck/apple --configs arguments/dycheck/config_v0.py --GVC_testmode 3",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        }, 
     ]
 }

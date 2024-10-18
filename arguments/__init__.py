@@ -141,6 +141,11 @@ class ModelHiddenParams(ParamGroup):
         self.deform_feat_dim = 32
         self.deform_n_offsets = 10
         
+        # dynamics
+        self.dynamics_activation='sigmoid' # relu or leakyrelu or sigmoid
+        
+        # dynamics loss weight
+        self.dynamics_loss_weight = 0.01
         
         super().__init__(parser, "ModelHiddenParams")
         
@@ -209,6 +214,9 @@ class OptimizationParams(ParamGroup):
         self.scaling_lr = 0.007
         self.rotation_lr = 0.002
         
+        # gvc mode 3 learning rate
+        self.dynamics_lr = 0.002
+        self.dynamics_lr_init = 0.002
         
         self.mlp_opacity_lr_init = 0.002
         self.mlp_opacity_lr_final = 0.00002  
@@ -252,6 +260,11 @@ class OptimizationParams(ParamGroup):
         self.min_opacity = 0.005
         self.success_threshold = 0.8
         self.densify_grad_threshold = 0.0002
+
+
+        # for dynamics
+        #self.dynamics_loss = "entropy"
+        self.dynamics_loss = None
 
         super().__init__(parser, "Optimization Parameters")
 

@@ -1,4 +1,4 @@
-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
+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
 
 https://iambeginnerdeveloper.tistory.com/256
 
@@ -13,6 +13,7 @@ git push -u origin main
 
 
 
+git add -A
 
 git stash
 

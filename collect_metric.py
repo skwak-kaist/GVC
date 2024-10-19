@@ -8,7 +8,7 @@ def get_folder_list(dataset):
         # apple, backpack, block, creeper, handwavy, haru-sit, mochi-high-five, pillow, space-out, spin, sriracha-tree, teddy, wheel
         # folder_list = ["apple", "backpack", "block", "creeper", "handwavy", "haru-sit", "mochi-high-five", "pillow", "space-out", "spin", "sriracha-tree", "teddy", "wheel"]
         # apple, block, paper-windmill, space-out, spin, teddy, wheel
-        folder_list = ["apple", "block", "paper-windmill", "space-out", "spin", "teddy", "wheel"]
+        folder_list = ["apple", "block", "spin", "paper-windmill", "space-out", "teddy", "wheel"]
         
     elif dataset == "dynerf":
         # coffee_martini, cook_spinach, cut_roasted_beef, flame_salmon_1, flame_steak, sear_steak

@@ -312,6 +312,9 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             if opt.dynamics_loss == "entropy":
                 dynamics_loss = gaussians.compute_dynamics_entropy_loss(hyper.dynamics_loss_weight)
                 loss += dynamics_loss
+            elif opt.dynamics_loss == "mean":
+                dynamic_mask_loss = torch.mean((torch.sigmoid(gaussians._dynamics)))
+                loss += opt.lambda_dynamics * dynamic_mask_loss # Compact 3DGS 참조
             
         # if opt.lambda_lpips !=0:
         #     lpipsloss = lpips_loss(image_tensor,gt_image_tensor,lpips_model)

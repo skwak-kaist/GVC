@@ -3,7 +3,7 @@
 eval "$(conda shell.bash hook)"
 conda activate GVC
 
-date=1018
+date=1020
 
 # argument가 입력되면 dataset에 할당
 if [ -z "$1" ]
@@ -90,9 +90,16 @@ else
 	port=$((port+$4))
 fi
 
+if [ -z "$5" ]
+  then
+	echo "port: "$port
+else
+	port=$5
+	echo "port: "$port
+fi
+
 GVC_Scale_Activation=1
 GVC_Opacity_Activation=0
-
 
 # output path
 dataset=dycheck

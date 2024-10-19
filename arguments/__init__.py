@@ -214,9 +214,10 @@ class OptimizationParams(ParamGroup):
         self.scaling_lr = 0.007
         self.rotation_lr = 0.002
         
-        # gvc mode 3 learning rate
-        self.dynamics_lr = 0.002
-        self.dynamics_lr_init = 0.002
+        # dynamic masks
+        self.dynamics_lr = 0.01
+        self.dynamics_lr_init = 0.01
+        self.lambda_dynamics = 0.0005
         
         self.mlp_opacity_lr_init = 0.002
         self.mlp_opacity_lr_final = 0.00002  
@@ -264,7 +265,7 @@ class OptimizationParams(ParamGroup):
 
         # for dynamics
         #self.dynamics_loss = "entropy"
-        self.dynamics_loss = None
+        self.dynamics_loss = "mean"
 
         super().__init__(parser, "Optimization Parameters")
 

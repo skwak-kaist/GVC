@@ -59,5 +59,8 @@ OptimizationParams = dict(
     min_opacity = 0.005,
     success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
+    
+    dynamics_loss = "mean",
+    
 
 )

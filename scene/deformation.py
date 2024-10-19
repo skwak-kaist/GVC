@@ -352,7 +352,8 @@ class Deformation_scaffold(nn.Module):
         
         # dynamics activation
         if self.gvc_dynamics != 0:
-            dynamics = self.dynamics_activation(dynamics)
+            #dynamics = self.dynamics_activation(dynamics)
+            dynamic_mask = ((torch.sigmoid(dynamics) > 0.01).float() - torch.sigmoid(dynamics)).detach() + torch.sigmoid(dynamics) # Compact 3DGS에서 사용한 learnable mask
                     
         # breakpoint()
         # 실제적인 deformation이 일어나는 부분
@@ -361,7 +362,8 @@ class Deformation_scaffold(nn.Module):
             dx = self.pos_deform(hidden)
             
             if self.gvc_dynamics == 1 or self.gvc_dynamics == 2 or self.gvc_dynamics == 5 or self.gvc_dynamics == 6:
-                dx = dx * dynamics
+                #dx = dx * dynamics
+                dx = dx * dynamic_mask
             
             pts = torch.zeros_like(rays_pts_emb[:,:3])
             pts = rays_pts_emb[:,:3]*mask + dx
@@ -372,7 +374,8 @@ class Deformation_scaffold(nn.Module):
             df = self.feature_deform(hidden)
             
             if self.gvc_dynamics == 3 or self.gvc_dynamics == 5:
-                df = df * dynamics
+                #df = df * dynamics
+                df = df * dynamic_mask
             
             feat_deformed = torch.zeros_like(feat)
             feat_deformed = feat*mask + df
@@ -383,7 +386,8 @@ class Deformation_scaffold(nn.Module):
             do = self.grid_offsets_deform(hidden)
             
             if self.gvc_dynamics == 4 or self.gvc_dynamics == 6:
-                do = do * dynamics
+                #do = do * dynamics
+                do = do * dynamic_mask
             
             # grid offset의 shape을 [batch, n_offsets, 3]에서 [batch, n_offsets* 3]로 변경
             grid_offsets = grid_offsets.reshape([-1, self.args.deform_n_offsets*3])
@@ -398,6 +402,10 @@ class Deformation_scaffold(nn.Module):
             
         if self.args.grid_scale_deform:
             ds = self.grid_scaling_deform(hidden)
+            
+            if self.gvc_dynamics == 1 or self.gvc_dynamics == 6:
+                ds = ds * dynamic_mask
+            
             grid_scaling_deformed = torch.zeros_like(grid_scaling)
             grid_scaling_deformed = grid_scaling*mask + ds
         else:

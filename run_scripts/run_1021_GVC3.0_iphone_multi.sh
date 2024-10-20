@@ -59,7 +59,7 @@ GVC_dynamic_mode=$3
 echo "GVC_dynamic_mode: "$GVC_dynamic_mode
 
 # 4th arguments: config number
-config=$4
+config="config_v"$4
 
 # 5th arguments: port
 if [ -z "$5" ]

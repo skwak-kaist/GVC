@@ -174,14 +174,6 @@ if __name__ == "__main__":
     parser.add_argument("--canonical_frame_render", action="store_true")
     parser.add_argument("--configs", type=str)
 
-    # my test args
-    parser.add_argument("--GVC_testmode", type=int, default = 1)
-    parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
-    parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
-    parser.add_argument("--GVC_Dynamics", type=int, default = 1, help="0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset")
-    parser.add_argument("--GVC_Dynamics_type", type=str, default = "mask", help="mul, mask")
-
-
     args = get_combined_args(parser)
     print("Rendering " , args.model_path)
     if args.configs:
@@ -193,23 +185,7 @@ if __name__ == "__main__":
     safe_state(args.quiet)
 
     # gvc params
-    gvc_params = {}
-    # append GVC testmode to gvc_params
-    gvc_params["GVC_testmode"] = args.GVC_testmode
-    gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
-    gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
-    gvc_params["GVC_Dynamics"] = args.GVC_Dynamics
-    gvc_params["GVC_Dynamics_type"] = args.GVC_Dynamics_type
-    
-
-    print("---------------------------------")
-    print("GVC_testmode: ", args.GVC_testmode)
-    print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
-    print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
-    print("GVC_Dynamics: ", args.GVC_Dynamics)
-    print("GVC_Dynamics_type: ", args.GVC_Dynamics_type)
-    print("---------------------------------")
-    
-    
+    gvc_params = model.merge_gvc_params(args)
+       
 
     render_sets(model.extract(args), hyperparam.extract(args), args.iteration, pipeline.extract(args), args.skip_train, args.skip_test, args.skip_video, args.canonical_frame_render, gvc_params)

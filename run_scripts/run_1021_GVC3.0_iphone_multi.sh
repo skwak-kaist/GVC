@@ -48,39 +48,33 @@ else
 	scenes=$scene_set
 fi
 
+
 echo "This scripts runs for scenes: $scenes"
 
-# 2nd arguments: GVC parameters
-GVC_testmode=$2
-echo "GVC_testmode: "$GVC_testmode
+# 2nd argument: config_number
+config_number=$2
+config="config_v"$config_number
 
-# 3rd arguments: GVC dynamic mode
-GVC_dynamic_mode=$3
-echo "GVC_dynamic_mode: "$GVC_dynamic_mode
-
-# 4th arguments: config number
-config="config_v"$4
-
-# 5th arguments: port
-if [ -z "$5" ]
+# 3rd argument: port
+if [ -z "$3" ]
   then
 	echo "port: "$port
 else
-	port=$5
+	port=$3
 	echo "port: "$port
 fi
 
-# 7th arguments: train or not
-if [ -z "$6" ]
+# 4th arguments: train or not
+if [ -z "$4" ]
   then
 	train=1
 else
-	train=$6
+	train=$4
 fi
 
 dataset=dycheck
-test_version=gvc${GVC_testmode}.${GVC_dynamic_mode}.$config
-output_path=${dataset}_${test_version}_${date}
+test_version=GVC_v$config_number
+output_path=${date}_${dataset}_${test_version}
 
 cd ..
 
@@ -88,8 +82,6 @@ for scene in $scenes; do
 
 	echo "########################################"
 	echo "scene: "$scene
-	echo "GVC_testmode: "$GVC_testmode
-	echo "GVC_dynamic_mode: "$GVC_dynamic_mode
 	echo "config: "$config
 	echo "GPU" $GPU_id
 	echo "########################################"
@@ -104,17 +96,17 @@ for scene in $scenes; do
 	then
 		# Finally, train.
 		echo "Training the model"
-		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py --GVC_testmode ${GVC_testmode} --GVC_Dynamics ${GVC_dynamic_mode} 
+		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py
 	else
 		echo "Skip training"
 	fi
 
 	# rendering
 	echo "Rendering the model"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --configs arguments/${dataset}/${config}.py --GVC_testmode ${GVC_testmode} --GVC_Dynamics ${GVC_dynamic_mode} 
+	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --configs arguments/${dataset}/${config}.py
 
 	# rendering canonical frame
-	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --skip_test --skip_video --configs arguments/${dataset}/${config}.py --canonical_frame_render --GVC_testmode ${GVC_testmode} 
+	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --skip_test --skip_video --configs arguments/${dataset}/${config}.py --canonical_frame_render
 	
 	# evaluation
 	echo "Evaluating the model"

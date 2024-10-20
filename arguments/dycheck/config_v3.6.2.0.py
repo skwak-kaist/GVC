@@ -15,11 +15,11 @@ ModelHiddenParams = dict(
     l1_time_planes =  0.0001,
     render_process=True,
 
-# my test parameters        
+	# 모두 deform     
     anchor_deform = True,
     local_context_feature_deform = True,
     grid_offsets_deform = True,
-    grid_scale_deform = True,
+    grid_scale_deform = False,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
     deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함    
@@ -34,13 +34,15 @@ ModelParams = dict(
     #voxel_size = 0.0005,
     voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
-
-	testmode = 3,
-	scale_activation = 1,
-	opacity_activation = 0,
-	dynamics = 1, # 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
-	dynamics_type = "mask", # mask or mul
     
+    scale_activation = 1,
+	opacity_activation = 0,
+    
+    testmode = 3,
+	dynamics = 6, 
+	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
+	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
+	dynamics_type = "mask", # mask or mul    
 )
 
 OptimizationParams = dict(
@@ -71,5 +73,4 @@ OptimizationParams = dict(
 	dynamics_loss = "None",
 
 )
-
 

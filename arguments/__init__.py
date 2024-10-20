@@ -86,11 +86,11 @@ class ModelParams(ParamGroup):
         self.add_points=False
         self.extension=".png"
         self.llffhold=8
-        
+
         ############################
         # GVC-related params
         ############################
-        self.testmode = 3 # GVC test mode version
+        self.testmode = 1 # GVC test mode version
         # testmode 1: initial_frame: scaffold-GS, others: 4DGS
         # testmode 2: initial_frame: scaffold-GS, feature deformation
         # testmode 3: dynamic mask 
@@ -112,17 +112,26 @@ class ModelParams(ParamGroup):
         self.dynamics_type = "mask"
         # mul: multiply the dynamic value to the feature
         # mask: mask the feature with the dynamic mask
-        
-        self.gvc_params = {}
-        # make into a dictionary for easy access
-        self.gvc_params["GVC_testmode"] = self.testmode
-        self.gvc_params["GVC_Scale_Activation"] = self.scale_activation
-        self.gvc_params["GVC_Opacity_Activation"] = self.opacity_activation
-        self.gvc_params["GVC_Dynamics"] = self.dynamics
-        self.gvc_params["GVC_Dynamics_type"] = self.dynamics_type
 
 
         super().__init__(parser, "Loading Parameters", sentinel)
+
+    def merge_gvc_params(self, args):
+        
+        gvc_params = {}
+        gvc_params["GVC_testmode"] = self.extract(args).testmode
+        gvc_params["GVC_Scale_Activation"] = args.scale_activation
+        gvc_params["GVC_Opacity_Activation"] = args.opacity_activation
+        gvc_params["GVC_Dynamics"] = args.dynamics
+        gvc_params["GVC_Dynamics_type"] = args.dynamics_type
+        
+        print("GVC_testmode: ", gvc_params["GVC_testmode"])
+        print("GVC_Scale_Activation: ", gvc_params["GVC_Scale_Activation"])
+        print("GVC_Opacity_Activation: ", gvc_params["GVC_Opacity_Activation"])
+        print("GVC_Dynamics: ", gvc_params["GVC_Dynamics"])
+        print("GVC_Dynamics_type: ", gvc_params["GVC_Dynamics_type"])
+                        
+        return gvc_params
 
     def extract(self, args):
         g = super().extract(args)

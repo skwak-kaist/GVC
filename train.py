@@ -600,13 +600,6 @@ if __name__ == "__main__":
     parser.add_argument("--expname", type=str, default = "")
     parser.add_argument("--configs", type=str, default = "")
 
-    # my test args
-    parser.add_argument("--GVC_testmode", type=int, default = 1)
-    parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
-    parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
-    parser.add_argument("--GVC_Dynamics", type=int, default = 1, help="0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset")
-    parser.add_argument("--GVC_Dynamics_type", type=str, default = "mask", help="mul, mask")
-    
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
     if args.configs:
@@ -617,17 +610,9 @@ if __name__ == "__main__":
     print("Optimizing " + args.model_path)
     #print("s.kwak check:" + str(args.net_width)) # checked
 
-    gvc_params = lp.extract(args).gvc_params
-    
-    print("GVC_testmode: ??", gvc_params["GVC_testmode"])
-    
-    # append GVC testmode to gvc_params
-    
-    gvc_params["GVC_testmode"] = args.GVC_testmode
-    gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
-    gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
-    gvc_params["GVC_Dynamics"] = args.GVC_Dynamics
-    gvc_params["GVC_Dynamics_type"] = args.GVC_Dynamics_type
+    # make into a dictionary for easier access
+    gvc_params = lp.merge_gvc_params(args)
+        
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
@@ -639,14 +624,6 @@ if __name__ == "__main__":
     # dataset, hyper, opt, pipe,
     #training(lp.extract(args), hp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from, args.expname)
 
-
-    print("---------------------------------")
-    print("GVC_testmode: ", args.GVC_testmode)
-    print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
-    print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
-    print("GVC_Dynamics: ", args.GVC_Dynamics)
-    print("GVC_Dynamics_type: ", args.GVC_Dynamics_type)
-    print("---------------------------------")
 
     training(lp.extract(args), hp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from, args.expname, gvc_params)
 

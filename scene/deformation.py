@@ -246,6 +246,7 @@ class Deformation_scaffold(nn.Module):
             self.static_mlp = nn.Sequential(nn.ReLU(),nn.Linear(self.W,self.W),nn.ReLU(),nn.Linear(self.W, 1))
         
         self.gvc_dynamics = gvc_params["GVC_Dynamics"]
+        self.gvc_dynamics_type = gvc_params["GVC_Dynamics_type"]
         
         self.ratio=0
         self.create_net()
@@ -352,8 +353,11 @@ class Deformation_scaffold(nn.Module):
         
         # dynamics activation
         if self.gvc_dynamics != 0:
-            #dynamics = self.dynamics_activation(dynamics)
-            dynamic_mask = ((torch.sigmoid(dynamics) > 0.01).float() - torch.sigmoid(dynamics)).detach() + torch.sigmoid(dynamics) # Compact 3DGS에서 사용한 learnable mask
+            if self.gvc_dynamics_type == "mul":
+                dynamic_mask = self.dynamics_activation(dynamics)
+            elif self.gvc_dynamics_type == "mask":
+                dynamic_mask = ((torch.sigmoid(dynamics) > 0.01).float() - torch.sigmoid(dynamics)).detach() + torch.sigmoid(dynamics) 
+            # Compact 3DGS에서 사용한 learnable mask
                     
         # breakpoint()
         # 실제적인 deformation이 일어나는 부분
@@ -362,7 +366,6 @@ class Deformation_scaffold(nn.Module):
             dx = self.pos_deform(hidden)
             
             if self.gvc_dynamics == 1 or self.gvc_dynamics == 2 or self.gvc_dynamics == 5 or self.gvc_dynamics == 6:
-                #dx = dx * dynamics
                 dx = dx * dynamic_mask
             
             pts = torch.zeros_like(rays_pts_emb[:,:3])
@@ -374,7 +377,6 @@ class Deformation_scaffold(nn.Module):
             df = self.feature_deform(hidden)
             
             if self.gvc_dynamics == 3 or self.gvc_dynamics == 5:
-                #df = df * dynamics
                 df = df * dynamic_mask
             
             feat_deformed = torch.zeros_like(feat)
@@ -386,7 +388,6 @@ class Deformation_scaffold(nn.Module):
             do = self.grid_offsets_deform(hidden)
             
             if self.gvc_dynamics == 4 or self.gvc_dynamics == 6:
-                #do = do * dynamics
                 do = do * dynamic_mask
             
             # grid offset의 shape을 [batch, n_offsets, 3]에서 [batch, n_offsets* 3]로 변경

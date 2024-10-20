@@ -310,8 +310,8 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             
         if stage == "fine" and gvc_params["GVC_Dynamics"] != 0:
             if opt.dynamics_loss == "entropy":
-                dynamics_loss = gaussians.compute_dynamics_entropy_loss(hyper.dynamics_loss_weight)
-                loss += dynamics_loss
+                dynamics_loss = torch.mean(-torch.sigmoid(gaussians._dynamics)*torch.log(torch.sigmoid(gaussians._dynamics)))
+                loss += opt.lambda_dynamics * dynamics_loss
             elif opt.dynamics_loss == "mean":
                 dynamic_mask_loss = torch.mean((torch.sigmoid(gaussians._dynamics)))
                 loss += opt.lambda_dynamics * dynamic_mask_loss # Compact 3DGS 참조
@@ -604,6 +604,8 @@ if __name__ == "__main__":
     parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
     parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
     parser.add_argument("--GVC_Dynamics", type=int, default = 1, help="0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset")
+    parser.add_argument("--GVC_Dynamics_type", type=str, default = "mul", help="mul, mask")
+    
 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
@@ -622,6 +624,7 @@ if __name__ == "__main__":
     gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
     gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
     gvc_params["GVC_Dynamics"] = args.GVC_Dynamics
+    gvc_params["GVC_Dynamics_type"] = args.GVC_Dynamics_type
 
     # Initialize system state (RNG)
     safe_state(args.quiet)
@@ -644,6 +647,7 @@ if __name__ == "__main__":
     print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
     print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
     print("GVC_Dynamics: ", args.GVC_Dynamics)
+    print("GVC_Dynamics_type: ", args.GVC_Dynamics_type)
     print("---------------------------------")
     
     

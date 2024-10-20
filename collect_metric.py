@@ -53,7 +53,7 @@ def collect_metric(folder_list, output_path):
         total_results[folder] = results[result_key]
 
         # print psnr result
-        print(f"{folder} : {results[result_key]['PSNR']}")
+        # print(f"{folder} : {results[result_key]['PSNR']}")
     
     #print(total_results)
     # json으로 저장
@@ -94,7 +94,6 @@ def collect_metric(folder_list, output_path):
         for key, value in lpips_alex_results.items():
             f.write(f"{key} : {value}\n")
 
-
 def collect_memory(folder_list, output_path):
     
     total_memory = {}
@@ -120,7 +119,7 @@ def collect_memory(folder_list, output_path):
         
         # 해당 폴더가 포함하는 파일의 용량 총 합을 MB 단위로 출력
         total_size = sum(os.path.getsize(os.path.join(total_path, f)) for f in os.listdir(total_path)) / (1000*1000)
-        print(f"{folder} : {total_size} MB")
+        # print(f"{folder} : {total_size} MB")
         
         total_memory[folder] = total_size
     
@@ -130,6 +129,63 @@ def collect_memory(folder_list, output_path):
     with open(os.path.join(output_path, output_folder_name+ "_ total_memory.txt"), 'w') as f:
         for key, value in total_memory.items():
             f.write(f"{key} : {value}\n")
+
+def merge_psnr_and_memory(folder_list, output_path):
+    
+    psnr_results = {}
+    total_memory = {}
+    
+    output_folder_name = output_path.split("/")[-1]
+    
+    # 결과 파일 생성
+    with open(os.path.join(output_path, output_folder_name+ "_ psnr_and_memory.txt"), 'w') as f:
+        f.write("")
+    
+    for folder in folder_list:
+        json_path = os.path.join(output_path, folder, "results.json")
+        model_path = os.path.join(output_path, folder, "point_cloud")
+
+        # 해당 폴더가 없는 경우 pass
+        if not os.path.exists(json_path):
+            with open(os.path.join(output_path, output_folder_name+ "_ psnr_and_memory.txt"), 'a') as f:
+                f.write(f"{folder} : \n")
+            continue
+            
+        # read the json
+        with open(json_path) as f:
+            results = json.load(f)
+
+        # results의 최 상단 key값이 무엇인지 확인
+        result_key = list(results.keys())[0]      
+        
+
+        psnr_results[folder] = results[result_key]['PSNR']
+
+        #model path에 있는 폴더 리스트
+        model_folder_list = os.listdir(model_path)
+        
+        # 이름순으로 정렬
+        model_folder_list.sort()
+        
+        # 가장 마지막 폴더
+        model_folder = model_folder_list[-1]
+        
+        # 총 경로
+        total_path = os.path.join(model_path, model_folder)
+        
+        # 해당 폴더가 포함하는 파일의 용량 총 합을 MB 단위로 출력
+        total_size = sum(os.path.getsize(os.path.join(total_path, f)) for f in os.listdir(total_path)) / (1000*1000)
+        # print(f"{folder} : {total_size} MB")
+        
+        total_memory[folder] = total_size
+        
+        print(f"{folder} : {results[result_key]['PSNR']} {total_size} MB")
+
+        # txt 파일로 저장 (계속 이어 쓰기)
+        with open(os.path.join(output_path, output_folder_name+ "_ psnr_and_memory.txt"), 'a') as f:
+            f.write(f"{folder} : {results[result_key]['PSNR']} {total_size} MB\n")
+        
+    
         
         
 if __name__ == "__main__":
@@ -148,7 +204,7 @@ if __name__ == "__main__":
 
     collect_memory(folder_list, args.output_path)
 
-
+    merge_psnr_and_memory(folder_list, args.output_path)
 
 
 

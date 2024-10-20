@@ -587,6 +587,7 @@ if __name__ == "__main__":
     op = OptimizationParams(parser)
     pp = PipelineParams(parser)
     hp = ModelHiddenParams(parser)
+    
     parser.add_argument('--ip', type=str, default="127.0.0.1")
     parser.add_argument('--port', type=int, default=6009)
     parser.add_argument('--debug_from', type=int, default=-1)
@@ -604,9 +605,8 @@ if __name__ == "__main__":
     parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
     parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
     parser.add_argument("--GVC_Dynamics", type=int, default = 1, help="0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset")
-    parser.add_argument("--GVC_Dynamics_type", type=str, default = "mul", help="mul, mask")
+    parser.add_argument("--GVC_Dynamics_type", type=str, default = "mask", help="mul, mask")
     
-
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
     if args.configs:
@@ -617,7 +617,10 @@ if __name__ == "__main__":
     print("Optimizing " + args.model_path)
     #print("s.kwak check:" + str(args.net_width)) # checked
 
-    gvc_params = {}
+    gvc_params = lp.extract(args).gvc_params
+    
+    print("GVC_testmode: ??", gvc_params["GVC_testmode"])
+    
     # append GVC testmode to gvc_params
     
     gvc_params["GVC_testmode"] = args.GVC_testmode
@@ -636,12 +639,7 @@ if __name__ == "__main__":
     # dataset, hyper, opt, pipe,
     #training(lp.extract(args), hp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from, args.expname)
 
-    '''
-    args.test_iterations: [3000, 7000, 14000] [14/09 16:19:06]
-    args.save_iterations: [14000, 20000, 30000, 45000, 60000, 30000] [14/09 16:19:06]
-    args.checkpoint_iterations: [] [14/09 16:19:06]
-    args.start_checkpoint: None [14/09 16:19:06]
-    '''
+
     print("---------------------------------")
     print("GVC_testmode: ", args.GVC_testmode)
     print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
@@ -649,8 +647,6 @@ if __name__ == "__main__":
     print("GVC_Dynamics: ", args.GVC_Dynamics)
     print("GVC_Dynamics_type: ", args.GVC_Dynamics_type)
     print("---------------------------------")
-    
-    
 
     training(lp.extract(args), hp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from, args.expname, gvc_params)
 

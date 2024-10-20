@@ -357,6 +357,8 @@ class Deformation_scaffold(nn.Module):
                 dynamic_mask = self.dynamics_activation(dynamics)
             elif self.gvc_dynamics_type == "mask":
                 dynamic_mask = ((torch.sigmoid(dynamics) > 0.01).float() - torch.sigmoid(dynamics)).detach() + torch.sigmoid(dynamics) 
+            else:
+                assert False, "Invalid dynamics type"
             # Compact 3DGS에서 사용한 learnable mask
                     
         # breakpoint()

@@ -86,6 +86,42 @@ class ModelParams(ParamGroup):
         self.add_points=False
         self.extension=".png"
         self.llffhold=8
+        
+        ############################
+        # GVC-related params
+        ############################
+        self.testmode = 3 # GVC test mode version
+        # testmode 1: initial_frame: scaffold-GS, others: 4DGS
+        # testmode 2: initial_frame: scaffold-GS, feature deformation
+        # testmode 3: dynamic mask 
+        # testmode 4: temporal scaffolding
+        
+        self.scale_activation = 1 # default 1
+        self.opacity_activation = 0 # default 0
+
+        # dynamics mode
+        self.dynamics = 1
+        # 0: None, 
+        # 1: dynamics(all), 
+        # 2: dynamic: anchor only, 
+        # 3: dynamic: local context only, 
+        # 4: dynamic: offset only, 
+        # 5: anchor and feature, 
+        # 6: anchor and offset"
+        
+        self.dynamics_type = "mask"
+        # mul: multiply the dynamic value to the feature
+        # mask: mask the feature with the dynamic mask
+        
+        self.gvc_params = {}
+        # make into a dictionary for easy access
+        self.gvc_params["GVC_testmode"] = self.testmode
+        self.gvc_params["GVC_Scale_Activation"] = self.scale_activation
+        self.gvc_params["GVC_Opacity_Activation"] = self.opacity_activation
+        self.gvc_params["GVC_Dynamics"] = self.dynamics
+        self.gvc_params["GVC_Dynamics_type"] = self.dynamics_type
+
+
         super().__init__(parser, "Loading Parameters", sentinel)
 
     def extract(self, args):
@@ -148,6 +184,7 @@ class ModelHiddenParams(ParamGroup):
         self.dynamics_loss_weight = 0.01
         
         super().__init__(parser, "ModelHiddenParams")
+
         
 class OptimizationParams(ParamGroup):
     def __init__(self, parser):

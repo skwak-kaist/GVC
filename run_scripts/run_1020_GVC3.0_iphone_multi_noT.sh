@@ -50,11 +50,12 @@ else
 		port=1000
 	elif [ $scene_set == "single" ]
 	then
-		scenes="paper-windmill" 
+		scenes="apple spin space-out" 
 		GPU_id=0
 		port=6700
 	else
-		scenes=$1
+		echo "Invalid scene set"
+		exit 1
 	fi
 fi
 
@@ -116,11 +117,11 @@ for scene in $scenes; do
 
 	#Third, downsample the point clouds generated in the second step.
 	echo "Downsampling the point cloud"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python scripts/downsample_point.py data/${dataset}/${scene}/colmap/dense/workspace/fused.ply data/${dataset}/${scene}/points3D_downsample2.ply
+	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python scripts/downsample_point.py data/${dataset}/${scene}/colmap/dense/workspace/fused.ply data/${dataset}/${scene}/points3D_downsample2.ply
 	
 	# Finally, train.
 	echo "Training the model"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py --GVC_testmode ${GVC_testmode} --GVC_Dynamics ${GVC_dynamic_mode} 
+	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py --GVC_testmode ${GVC_testmode} --GVC_Dynamics ${GVC_dynamic_mode} 
 	
 	# rendering
 	echo "Rendering the model"

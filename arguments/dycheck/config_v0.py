@@ -14,16 +14,16 @@ ModelHiddenParams = dict(
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
     render_process=True,
-        
+
+# my test parameters        
     anchor_deform = True,
     local_context_feature_deform = True,
     grid_offsets_deform = True,
     grid_scale_deform = True,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함
-    
-    dynamics_activation = "sigmoid"
+    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함    
+    dynamics_activation = "sigmoid", 
     
 )
 
@@ -34,6 +34,12 @@ ModelParams = dict(
     #voxel_size = 0.0005,
     voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
+
+	testmode = 3,
+	scale_activation = 1,
+	opacity_activation = 0,
+	dynamics = 1, # 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
+	dynamics_type = "mask", # mask or mul
     
 )
 
@@ -55,12 +61,15 @@ OptimizationParams = dict(
     update_from = 1500,
     update_interval = 100,
     update_until = 15_000,
-        
+
+# my test parameters
     min_opacity = 0.005,
     success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 
-	#dynamics_loss = "mean",
-	dynamics_loss = "entropy",
+	#dynamics_loss = "mean", # mean or entropy, 그 외의 값을 주면 Loss를 걸지 않음	
+	dynamics_loss = "None",
 
 )
+
+

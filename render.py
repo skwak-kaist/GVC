@@ -179,6 +179,7 @@ if __name__ == "__main__":
     parser.add_argument("--GVC_Scale_Activation", type=int, default = 1, help="0: default, 1: scale activation outside")
     parser.add_argument("--GVC_Opacity_Activation", type=int, default = 0, help="0: default, 1: opacity activation outside")
     parser.add_argument("--GVC_Dynamics", type=int, default = 1, help="0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset")
+    parser.add_argument("--GVC_Dynamics_type", type=str, default = "mask", help="mul, mask")
 
 
     args = get_combined_args(parser)
@@ -198,12 +199,15 @@ if __name__ == "__main__":
     gvc_params["GVC_Scale_Activation"] = args.GVC_Scale_Activation
     gvc_params["GVC_Opacity_Activation"] = args.GVC_Opacity_Activation
     gvc_params["GVC_Dynamics"] = args.GVC_Dynamics
+    gvc_params["GVC_Dynamics_type"] = args.GVC_Dynamics_type
+    
 
     print("---------------------------------")
     print("GVC_testmode: ", args.GVC_testmode)
     print("GVC_Scale_Activation: ", args.GVC_Scale_Activation)
     print("GVC_Opacity_Activation: ", args.GVC_Opacity_Activation)
     print("GVC_Dynamics: ", args.GVC_Dynamics)
+    print("GVC_Dynamics_type: ", args.GVC_Dynamics_type)
     print("---------------------------------")
     
     

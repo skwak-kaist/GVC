@@ -302,7 +302,7 @@ class OptimizationParams(ParamGroup):
 
         # for dynamics
         #self.dynamics_loss = "entropy"
-        self.dynamics_loss = "mean"
+        self.dynamics_loss = None
 
         super().__init__(parser, "Optimization Parameters")
 

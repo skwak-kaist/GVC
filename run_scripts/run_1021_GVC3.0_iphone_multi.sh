@@ -91,6 +91,7 @@ for scene in $scenes; do
 	echo "GVC_testmode: "$GVC_testmode
 	echo "GVC_dynamic_mode: "$GVC_dynamic_mode
 	echo "config: "$config
+	echo "GPU" $GPU_id
 	echo "########################################"
 
 

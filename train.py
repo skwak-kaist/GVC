@@ -308,7 +308,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             ssim_loss = ssim(image_tensor,gt_image_tensor)
             loss += opt.lambda_dssim * (1.0-ssim_loss)
             
-        if stage == "fine" and gvc_params["GVC_Dynamics"] != 0:
+        if stage == "fine" and gvc_params["GVC_Dynamics"] != 0 and  gvc_params["GVC_Dynamics"] <= 6:
             if opt.dynamics_loss == "entropy":
                 dynamics_loss = torch.mean(-torch.sigmoid(gaussians._dynamics)*torch.log(torch.sigmoid(gaussians._dynamics)))
                 loss += opt.lambda_dynamics * dynamics_loss

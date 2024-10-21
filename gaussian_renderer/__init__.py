@@ -578,7 +578,7 @@ def render_test3(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     grid_scaling = pc.get_scaling # ([10562, 6])
     
     if gvc_params["GVC_Dynamics"] != 0:
-        dynamics = pc._dynamics # ([10562, 1])
+        dynamics = pc._dynamics # ([10562, 1]) or ([10562, 2])
     else:
         dynamics = None
         

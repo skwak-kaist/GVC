@@ -375,10 +375,14 @@ class GaussianModel:
         anchors_feat = torch.zeros((fused_point_cloud.shape[0], self.feat_dim)).float().cuda()
         
         # gvc mode 3
+        # gvc dynamics 0~6까지는 길이가 1, 7이상부터는 길이가 2
         if self.gvc_dynamics != 0:
-            dynamics = torch.zeros((fused_point_cloud.shape[0], 1)).float().cuda()
+            if self.gvc_dynamics >= 7:
+                dynamics  = torch.zeros((fused_point_cloud.shape[0], 2)).float().cuda()
+            else:
+                dynamics = torch.zeros((fused_point_cloud.shape[0], 1)).float().cuda()
             self._dynamics = nn.Parameter(dynamics.requires_grad_(True))
-        
+                    
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
         dist2 = torch.clamp_min(distCUDA2(fused_point_cloud).float().cuda(), 0.0000001)
@@ -450,7 +454,7 @@ class GaussianModel:
         
         
         if self.use_feat_bank:
-            if self.gvc_dynamics: 
+            if self.gvc_dynamics != 0:
                 l = [
                     {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
                     {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
@@ -471,7 +475,6 @@ class GaussianModel:
                     {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},    
                     {'params': [self._dynamics], 'lr': training_args.dynamics_lr_init, "name": "dynamics"},
                     ]
-            
             else:
                 l = [
                     {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
@@ -493,7 +496,7 @@ class GaussianModel:
                     {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},    
                     ]
         elif self.appearance_dim > 0:
-            if self.gvc_dynamics: 
+            if self.gvc_dynamics != 0:
                 l = [
                     {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
                     {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
@@ -668,8 +671,12 @@ class GaussianModel:
             l.append('rot_{}'.format(i))
         
         if self.gvc_dynamics != 0:
-            l.append('dynamics')
-            
+            if self.gvc_dynamics >= 7:
+                for i in range(self._dynamics.shape[1]):
+                    l.append('dynamics_{}'.format(i))
+            else:
+                l.append('dynamics')
+                        
         return l
 
     def compute_deformation(self,time):
@@ -786,9 +793,17 @@ class GaussianModel:
         offsets = offsets.reshape((offsets.shape[0], 3, -1))
         
         # dynamics
-        if self.gvc_dynamics != 0:
-            dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
-            self._dynamics = nn.Parameter(torch.tensor(dynamics, dtype=torch.float, device="cuda").requires_grad_(True))
+        if self.gvc_dynamics != 0:    
+            dynamics_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("dynamics")]
+            dynamics_names = sorted(dynamics_names, key = lambda x: int(x.split('_')[-1]))
+            dynamics = np.zeros((anchor.shape[0], len(dynamics_names)))
+            for idx, attr_name in enumerate(dynamics_names):
+                dynamics[:, idx] = np.asarray(plydata.elements[0][attr_name]).astype(np.float32)
+                    
+        
+                    
+            #dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
+            #self._dynamics = nn.Parameter(torch.tensor(dynamics, dtype=torch.float, device="cuda").requires_grad_(True))
         
         
         self._anchor_feat = nn.Parameter(torch.tensor(anchor_feats, dtype=torch.float, device="cuda").requires_grad_(True))
@@ -798,6 +813,9 @@ class GaussianModel:
         self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device="cuda").requires_grad_(True))
         self._scaling = nn.Parameter(torch.tensor(scales, dtype=torch.float, device="cuda").requires_grad_(True))
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device="cuda").requires_grad_(True))
+
+        if self.gvc_dynamics != 0:
+            self._dynamics = nn.Parameter(torch.tensor(dynamics, dtype=torch.float, device="cuda").requires_grad_(True))
 
 
     # 4DGS
@@ -1042,8 +1060,11 @@ class GaussianModel:
 
                 
                 if self.gvc_dynamics != 0:
-                    new_dynamics = torch.zeros([candidate_anchor.shape[0], 1], device=candidate_anchor.device).float()
-                    
+                    if self.gvc_dynamics >= 7:
+                        new_dynamics = torch.zeros([candidate_anchor.shape[0], 2], device=candidate_anchor.device).float()
+                    else: 
+                        new_dynamics = torch.zeros([candidate_anchor.shape[0], 1], device=candidate_anchor.device).float()
+
                     d = {
                         "anchor": candidate_anchor,
                         "scaling": new_scaling,

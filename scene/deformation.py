@@ -248,9 +248,49 @@ class Deformation_scaffold(nn.Module):
         self.gvc_dynamics = gvc_params["GVC_Dynamics"]
         self.gvc_dynamics_type = gvc_params["GVC_Dynamics_type"]
         
+        self.gvc_dynamics_flag = self.gvc_dynamics_get_flag()
+        
+        
         self.ratio=0
         self.create_net()
-        
+     
+    def gvc_dynamics_get_flag(self):
+        if self.gvc_dynamics == 0:
+            return [False, False, False, False] # anchor, local context feature, grid offsets, grid scaling
+        elif self.gvc_dynamics == 1:
+            return [True, True, True, True]
+        elif self.gvc_dynamics == 2:
+            return [True, False, False, False]
+        elif self.gvc_dynamics == 3:
+            return [False, True, False, False]
+        elif self.gvc_dynamics == 4:
+            return [False, False, True, False]
+        elif self.gvc_dynamics == 5:
+            return [True, True, False, False]
+        elif self.gvc_dynamics == 6:
+            return [True, False, True, False]
+        elif self.gvc_dynamics == 7:
+            return [True, True, True, True]
+        else:
+            assert False, "Invalid dynamics type"    
+    
+    def get_dynamics(self, dynamics):
+        if self.gvc_dynamics_type == "mask":
+            dynamics_anchor = ((torch.sigmoid(dynamics[:,0]) > 0.01).float() - torch.sigmoid(dynamics[:,0])).detach() + torch.sigmoid(dynamics[:,0])
+            dynamics_feature = ((torch.sigmoid(dynamics[:,-1]) > 0.01).float() - torch.sigmoid(dynamics[:,-1])).detach() + torch.sigmoid(dynamics[:,-1])
+        elif self.gvc_dynamics_type == "mul":
+            dynamics_anchor = self.dynamics_activation(dynamics[:,0])
+            dynamics_feature = self.dynamics_activation(dynamics[:,-1])
+        elif self.gvc_dynamics_type == "mask_mul":
+            dynamics_anchor = ((torch.sigmoid(dynamics[:,0]) > 0.01).float() - torch.sigmoid(dynamics[:,0])).detach() + torch.sigmoid(dynamics[:,0])
+            dynamics_feature = self.dynamics_activation(dynamics[:,-1])
+        elif self.gvc_dynamics_type == "mul_mask":
+            dynamics_anchor = self.dynamics_activation(dynamics[:,0])
+            dynamics_feature = ((torch.sigmoid(dynamics[:,-1]) > 0.01).float() - torch.sigmoid(dynamics[:,-1])).detach() + torch.sigmoid(dynamics[:,-1])
+        else:
+            assert False, "Invalid dynamics type"
+            
+        return dynamics_anchor.unsqueeze(-1), dynamics_feature.unsqueeze(-1)
         
         
     @property
@@ -297,7 +337,6 @@ class Deformation_scaffold(nn.Module):
                 self.dynamics_activation = nn.Sigmoid()
             else:
                 assert False, "Invalid dynamics activation function"
-                
                        
         # 여기서부터 하면됨!!!! feature deform!!!       
                 
@@ -338,6 +377,7 @@ class Deformation_scaffold(nn.Module):
         grid_feature = self.grid(rays_pts_emb[:,:3])
         dx = self.static_mlp(grid_feature)
         return rays_pts_emb[:, :3] + dx
+    
     def forward_dynamic(self, rays_pts_emb, feat, grid_offsets, grid_scaling, dynamics, time_emb, time_feature): # 수정
         # time 과 point를 넣고 grid feature를 가져옴
         #hidden = self.query_time(rays_pts_emb, scales_emb, rotations_emb, time_feature, time_emb) 
@@ -351,15 +391,9 @@ class Deformation_scaffold(nn.Module):
         else:
             mask = torch.ones_like(rays_pts_emb[:,0]).unsqueeze(-1) # 수정
         
-        # dynamics activation
-        if self.gvc_dynamics != 0:
-            if self.gvc_dynamics_type == "mul":
-                dynamic_mask = self.dynamics_activation(dynamics)
-            elif self.gvc_dynamics_type == "mask":
-                dynamic_mask = ((torch.sigmoid(dynamics) > 0.01).float() - torch.sigmoid(dynamics)).detach() + torch.sigmoid(dynamics) 
-            else:
-                assert False, "Invalid dynamics type"
-            # Compact 3DGS에서 사용한 learnable mask
+        # dynamics mask                
+        dynamics_anchor, dynamics_feature = self.get_dynamics(dynamics)
+        
                     
         # breakpoint()
         # 실제적인 deformation이 일어나는 부분
@@ -367,8 +401,8 @@ class Deformation_scaffold(nn.Module):
         if self.args.anchor_deform:
             dx = self.pos_deform(hidden)
             
-            if self.gvc_dynamics == 1 or self.gvc_dynamics == 2 or self.gvc_dynamics == 5 or self.gvc_dynamics == 6:
-                dx = dx * dynamic_mask
+            if self.gvc_dynamics_flag[0]:
+                dx = dx * dynamics_anchor
             
             pts = torch.zeros_like(rays_pts_emb[:,:3])
             pts = rays_pts_emb[:,:3]*mask + dx
@@ -378,8 +412,8 @@ class Deformation_scaffold(nn.Module):
         if self.args.local_context_feature_deform:    
             df = self.feature_deform(hidden)
             
-            if self.gvc_dynamics == 3 or self.gvc_dynamics == 5:
-                df = df * dynamic_mask
+            if self.gvc_dynamics_flag[1]:
+                df = df * dynamics_feature
             
             feat_deformed = torch.zeros_like(feat)
             feat_deformed = feat*mask + df
@@ -389,8 +423,8 @@ class Deformation_scaffold(nn.Module):
         if self.args.grid_offsets_deform:
             do = self.grid_offsets_deform(hidden)
             
-            if self.gvc_dynamics == 4 or self.gvc_dynamics == 6:
-                do = do * dynamic_mask
+            if self.gvc_dynamics_flag[2]:
+                do = do * dynamics_feature
             
             # grid offset의 shape을 [batch, n_offsets, 3]에서 [batch, n_offsets* 3]로 변경
             grid_offsets = grid_offsets.reshape([-1, self.args.deform_n_offsets*3])
@@ -406,8 +440,8 @@ class Deformation_scaffold(nn.Module):
         if self.args.grid_scale_deform:
             ds = self.grid_scaling_deform(hidden)
             
-            if self.gvc_dynamics == 1 or self.gvc_dynamics == 6:
-                ds = ds * dynamic_mask
+            if self.gvc_dynamics_flag[3]:
+                ds = ds * dynamics_feature
             
             grid_scaling_deformed = torch.zeros_like(grid_scaling)
             grid_scaling_deformed = grid_scaling*mask + ds

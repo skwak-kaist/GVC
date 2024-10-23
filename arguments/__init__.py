@@ -113,6 +113,12 @@ class ModelParams(ParamGroup):
         # mul: multiply the dynamic value to the feature
         # mask: mask the feature with the dynamic mask
 
+        # GVC 4.0
+        self.num_of_segments = 4
+        # number of segments for temporal scaffolding
+        
+        self.temporal_scaffolding = 1 # 0: off 1: uniform scaffolding 2: adaptive scaffolding
+        self.local_deform_method = "explicit" # explicit(gaussian) or implicit(feature)
 
         super().__init__(parser, "Loading Parameters", sentinel)
 
@@ -124,12 +130,18 @@ class ModelParams(ParamGroup):
         gvc_params["GVC_Opacity_Activation"] = args.opacity_activation
         gvc_params["GVC_Dynamics"] = args.dynamics
         gvc_params["GVC_Dynamics_type"] = args.dynamics_type
+        gvc_params["GVC_num_of_segments"] = args.num_of_segments
+        gvc_params["GVC_temporal_scaffolding"] = args.temporal_scaffolding
+        gvc_params["GVC_local_deform_method"] = args.local_deform_method
         
         print("GVC_testmode: ", gvc_params["GVC_testmode"])
         print("GVC_Scale_Activation: ", gvc_params["GVC_Scale_Activation"])
         print("GVC_Opacity_Activation: ", gvc_params["GVC_Opacity_Activation"])
         print("GVC_Dynamics: ", gvc_params["GVC_Dynamics"])
         print("GVC_Dynamics_type: ", gvc_params["GVC_Dynamics_type"])
+        print("GVC_num_of_segments: ", gvc_params["GVC_num_of_segments"])
+        print("GVC_temporal_scaffolding: ", gvc_params["GVC_temporal_scaffolding"])
+        print("GVC_local_deform_method: ", gvc_params["GVC_local_deform_method"])
                         
         return gvc_params
 
@@ -166,6 +178,15 @@ class ModelHiddenParams(ParamGroup):
                              'resolution': [64, 64, 64, 25]  # [64,64,64]: resolution of spatial grid. 25: resolution of temporal grid, better to be half length of dynamic frames
                             }
         self.multires = [1, 2, 4, 8] # multi resolution of voxel grid
+        
+        self.kplanes_config_local = {
+                             'grid_dimensions': 2,
+                             'input_coordinate_dim': 4,
+                             'output_coordinate_dim': 32,
+                             'resolution': [64, 64, 64, 25]  # [64,64,64]: resolution of spatial grid. 25: resolution of temporal grid, better to be half length of dynamic frames
+                            }
+        self.multires_local = [1, 2, 4, 8] # multi resolution of voxel grid
+        
         self.no_dx=False # cancel the deformation of Gaussians' position
         self.no_grid=False # cancel the spatial-temporal hexplane.
         self.no_ds=False # cancel the deformation of Gaussians' scaling
@@ -191,6 +212,8 @@ class ModelHiddenParams(ParamGroup):
         
         # dynamics loss weight
         self.dynamics_loss_weight = 0.01
+        
+
         
         super().__init__(parser, "ModelHiddenParams")
 

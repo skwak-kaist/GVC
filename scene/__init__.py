@@ -24,7 +24,7 @@ class Scene:
 
     gaussians : GaussianModel
 
-    def __init__(self, args : ModelParams, gaussians : GaussianModel, load_iteration=None, shuffle=True, resolution_scales=[1.0], load_coarse=False):
+    def __init__(self, args : ModelParams, gaussians : GaussianModel, gvc_params=None, load_iteration=None, shuffle=True, resolution_scales=[1.0], load_coarse=False):
         """b
         :param path: Path to colmap scene main folder.
         """
@@ -80,7 +80,12 @@ class Scene:
             print("add points.")
             # breakpoint()
             scene_info = scene_info._replace(point_cloud=add_points(scene_info.point_cloud, xyz_max=xyz_max, xyz_min=xyz_min))
-        self.gaussians._deformation.deformation_net.set_aabb(xyz_max,xyz_min)
+        
+        if gvc_params["GVC_temporal_scaffolding"]:
+            self.gaussians._deformation_G2C.deformation_net.set_aabb(xyz_max,xyz_min)
+            self.gaussians._deformation_C2L.deformation_net.set_aabb(xyz_max,xyz_min)
+        else:
+            self.gaussians._deformation.deformation_net.set_aabb(xyz_max,xyz_min)
 
         # scaffold-gs
         self.gaussians.set_appearance(len(scene_info.train_cameras))

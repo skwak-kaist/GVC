@@ -160,8 +160,13 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         #if iteration % 1000 == 0:
         #    gaussians.oneupSHdegree()
 
-        # Pick a random Camera
+        '''
+        # 0~1로 normalization된 time이라는 것을 깨달음
+        for i in range(0, len(viewpoint_stack)-1):
+            print(i, ":", viewpoint_stack[i].time)
+        '''
 
+        # Pick a random Camera (original branch)
         # dynerf's branch
         if opt.dataloader and not load_in_memory:
             try:
@@ -172,13 +177,11 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                     viewpoint_stack_loader = DataLoader(viewpoint_stack, batch_size=opt.batch_size,shuffle=True,num_workers=16,collate_fn=list)
                     random_loader = True
                 loader = iter(viewpoint_stack_loader)
-
         else:
             idx = 0
             viewpoint_cams = []
 
-            while idx < batch_size :    
-                    
+            while idx < batch_size :                 
                 viewpoint_cam = viewpoint_stack.pop(randint(0,len(viewpoint_stack)-1))
                 if not viewpoint_stack :
                     viewpoint_stack =  temp_list.copy()
@@ -197,6 +200,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         radii_list = []
         visibility_filter_list = []
         viewspace_point_tensor_list = []
+               
         
         # 
         ######## 여기서부터가 실제적인 loop #########
@@ -308,13 +312,17 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             ssim_loss = ssim(image_tensor,gt_image_tensor)
             loss += opt.lambda_dssim * (1.0-ssim_loss)
             
-        if stage == "fine" and gvc_params["GVC_Dynamics"] != 0 and  gvc_params["GVC_Dynamics"] <= 6:
+        if stage == "fine" and gvc_params["GVC_Dynamics"] != 0:
             if opt.dynamics_loss == "entropy":
                 dynamics_loss = torch.mean(-torch.sigmoid(gaussians._dynamics)*torch.log(torch.sigmoid(gaussians._dynamics)))
                 loss += opt.lambda_dynamics * dynamics_loss
             elif opt.dynamics_loss == "mean":
                 dynamic_mask_loss = torch.mean((torch.sigmoid(gaussians._dynamics)))
                 loss += opt.lambda_dynamics * dynamic_mask_loss # Compact 3DGS 참조
+            elif opt.dynamics_loss == "mean_none":    
+                dynamic_mask_loss = torch.mean((torch.sigmoid(gaussians._dynamics[:,0])))
+                loss += opt.lambda_dynamics * dynamic_mask_loss 
+            
             
         # if opt.lambda_lpips !=0:
         #     lpipsloss = lpips_loss(image_tensor,gt_image_tensor,lpips_model)
@@ -463,7 +471,7 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
                                   dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
         # print(dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist) # False, False, False
-    elif gvc_params["GVC_testmode"] == 2 or gvc_params["GVC_testmode"] == 3: 
+    elif gvc_params["GVC_testmode"] == 2 or gvc_params["GVC_testmode"] == 3 or gvc_params["GVC_testmode"] == 4: 
     # testmode 2: initial_frame: scaffold-GS, deformation: anchor points and local context features
         gaussians = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size, 
                                   dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor, 
@@ -475,17 +483,25 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
 
     dataset.model_path = args.model_path
     timer = Timer()
-    scene = Scene(dataset, gaussians, load_coarse=None)
+    scene = Scene(dataset, gaussians, gvc_params, load_coarse=None)
     # scene is a class that contains attributes and method: gaussians, dataset, save, load, getTrainCameras, getTestCameras, getVideo
     timer.start()
     # 기본적인 instance 생성 및 변수 할당 후, scene_reconstruction 함수를 coarse, fine stage에 대해 각각 1번씩 실행
-    scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
-                             checkpoint_iterations, checkpoint, debug_from,
-                             gaussians, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)
-
-    scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
-                         checkpoint_iterations, checkpoint, debug_from,
-                         gaussians, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)
+    if gvc_params["GVC_testmode"] <=3 :       
+        scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                                checkpoint_iterations, checkpoint, debug_from,
+                                gaussians, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)
+        scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                            checkpoint_iterations, checkpoint, debug_from,
+                            gaussians, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)
+    elif gvc_params["GVC_testmode"] == 4:      
+        scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                                checkpoint_iterations, checkpoint, debug_from,
+                                gaussians, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)
+        scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                            checkpoint_iterations, checkpoint, debug_from,
+                            gaussians, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)       
+        
 
 def prepare_output_and_logger(expname):    
     if not args.model_path:

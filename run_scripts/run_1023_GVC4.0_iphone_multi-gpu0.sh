@@ -42,7 +42,7 @@ then
 elif [ $scene_set == "all" ]
 then 
 	scenes="apple block spin paper-windmill space-out teddy wheel" 
-	GPU_id=1
+	GPU_id=0
 	port=5000
 else
 	scenes=$scene_set

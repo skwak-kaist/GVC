@@ -14,7 +14,7 @@ from scene.hexplane import HexPlaneField
 from scene.grid import DenseGrid
 # from scene.grid import HashHexPlane
 class Deformation(nn.Module):
-    def __init__(self, D=8, W=256, input_ch=27, input_ch_time=9, grid_pe=0, skips=[], args=None):
+    def __init__(self, D=8, W=256, input_ch=27, input_ch_time=9, grid_pe=0, skips=[], args=None, deform_stage="global"):
         super(Deformation, self).__init__()
         self.D = D
         self.W = W
@@ -23,7 +23,13 @@ class Deformation(nn.Module):
         self.skips = skips
         self.grid_pe = grid_pe
         self.no_grid = args.no_grid
-        self.grid = HexPlaneField(args.bounds, args.kplanes_config, args.multires)
+        self.deform_stage = deform_stage
+        if self.deform_stage == "global":
+            self.grid = HexPlaneField(args.bounds, args.kplanes_config, args.multires)
+        elif self.deform_stage == "local":
+            self.grid = HexPlaneField(args.bounds, args.kplanes_config_local, args.multires_local)
+        else: 
+            assert False, "Invalid deform stage"
         # breakpoint()
         self.args = args
         # self.args.empty_voxel=True
@@ -165,7 +171,7 @@ class Deformation(nn.Module):
         return parameter_list
     
 class deform_network(nn.Module):
-    def __init__(self, args) :
+    def __init__(self, args, deform_stage="global"):
         super(deform_network, self).__init__()
         net_width = args.net_width
         timebase_pe = args.timebase_pe
@@ -180,7 +186,7 @@ class deform_network(nn.Module):
         self.timenet = nn.Sequential(
         nn.Linear(times_ch, timenet_width), nn.ReLU(),
         nn.Linear(timenet_width, timenet_output))
-        self.deformation_net = Deformation(W=net_width, D=defor_depth, input_ch=(3)+(3*(posbase_pe))*2, grid_pe=grid_pe, input_ch_time=timenet_output, args=args)
+        self.deformation_net = Deformation(W=net_width, D=defor_depth, input_ch=(3)+(3*(posbase_pe))*2, grid_pe=grid_pe, input_ch_time=timenet_output, args=args, deform_stage=deform_stage)
         self.register_buffer('time_poc', torch.FloatTensor([(2**i) for i in range(timebase_pe)]))
         self.register_buffer('pos_poc', torch.FloatTensor([(2**i) for i in range(posbase_pe)]))
         self.register_buffer('rotation_scaling_poc', torch.FloatTensor([(2**i) for i in range(scale_rotation_pe)]))
@@ -227,7 +233,7 @@ class deform_network(nn.Module):
 ##################################################
     
 class Deformation_scaffold(nn.Module):
-    def __init__(self, D=8, W=256, input_ch=27, input_ch_time=9, grid_pe=0, skips=[], args=None, gvc_params=None):
+    def __init__(self, D=8, W=256, input_ch=27, input_ch_time=9, grid_pe=0, skips=[], args=None, gvc_params=None, deform_stage="global"):
         super(Deformation_scaffold, self).__init__()
         self.D = D
         self.W = W
@@ -236,7 +242,13 @@ class Deformation_scaffold(nn.Module):
         self.skips = skips
         self.grid_pe = grid_pe
         self.no_grid = args.no_grid
-        self.grid = HexPlaneField(args.bounds, args.kplanes_config, args.multires)
+        self.deform_stage = deform_stage
+        if self.deform_stage == "global":
+            self.grid = HexPlaneField(args.bounds, args.kplanes_config, args.multires)
+        elif self.deform_stage == "local":
+            self.grid = HexPlaneField(args.bounds, args.kplanes_config_local, args.multires_local)
+        else: 
+            assert False, "Invalid deform stage"
         # breakpoint()
         self.args = args
         # self.args.empty_voxel=True
@@ -466,7 +478,7 @@ class Deformation_scaffold(nn.Module):
 
 
 class deform_network_scaffold(nn.Module):
-    def __init__(self, args, gvc_params=None) :
+    def __init__(self, args, gvc_params=None, deform_stage="global"): 
         super(deform_network_scaffold, self).__init__()
         net_width = args.net_width
         timebase_pe = args.timebase_pe
@@ -493,7 +505,8 @@ class deform_network_scaffold(nn.Module):
                                                     grid_pe=grid_pe, 
                                                     input_ch_time=timenet_output, 
                                                     args=args,
-                                                    gvc_params=gvc_params)
+                                                    gvc_params=gvc_params, 
+                                                    deform_stage=deform_stage)
         
         
         self.register_buffer('time_poc', torch.FloatTensor([(2**i) for i in range(timebase_pe)]))

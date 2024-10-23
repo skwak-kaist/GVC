@@ -142,7 +142,8 @@ pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_video: bool
                                   dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
 
 
-        scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
+        #scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
+        scene = Scene(dataset, gaussians, gvc_params, load_iteration=iteration, shuffle=False)
         cam_type=scene.dataset_type
         bg_color = [1,1,1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")

@@ -141,10 +141,18 @@ class GaussianModel:
         self._deformation_table = torch.empty(0)
 
         # for scaffold-GS deformation (s.kwak)
-        if self.gvc_testmode >= 2:
+        if self.gvc_testmode == 0 or self.gvc_testmode == 1:
+            self._deformation = deform_network(args)
+        elif self.gvc_testmode == 2 or self.gvc_testmode == 3:
             self._deformation = deform_network_scaffold(args, gvc_params)
-        else:
-            self._deformation = deform_network(args)    
+        elif self.gvc_testmode == 4:
+            self._deformation_G2C = deform_network_scaffold(args,gvc_params, deform_stage="global")
+            if gvc_params["GVC_local_deform_method"] == "explicit":
+                self._deformation_C2L = deform_network(args, deform_stage="local")
+            elif gvc_params["GVC_local_deform_method"] == "implicit":
+                self._deformation_C2L = deform_network_scaffold(args, gvc_params, deform_stage="local")
+            else:
+                raise ValueError("local_deform_method should be either 'gaussian' or 'scaffold'")
                         
 
         if self.use_feat_bank:
@@ -201,27 +209,43 @@ class GaussianModel:
 
 
     def capture(self):
-        return (
-            self.active_sh_degree,
-            self._xyz,
-            self._deformation.state_dict(),
-            self._deformation_table,
-            
-            # scafold-GS
-            
-            
-            # self.grid,
-            self._features_dc,
-            self._features_rest,
-            self._scaling,
-            self._rotation,
-            self._opacity,
-            self.max_radii2D,
-            self.xyz_gradient_accum,
-            self.denom,
-            self.optimizer.state_dict(),
-            self.spatial_lr_scale,
-        )
+        if self.gvc_testmode >=4 :
+            return (
+                self.active_sh_degree,
+                self._xyz,
+                self._deformation_G2C.state_dict(),
+                self._deformation_C2L.state_dict(),
+                self._deformation_table,
+                self._features_dc,
+                self._features_rest,
+                self._scaling,
+                self._rotation,
+                self._opacity,
+                self.max_radii2D,
+                self.xyz_gradient_accum,
+                self.denom,
+                self.optimizer.state_dict(),
+                self.spatial_lr_scale,
+            )
+        else:
+            return (
+                self.active_sh_degree,
+                self._xyz,
+                self._deformation.state_dict(),
+                self._deformation_table,
+                self._features_dc,
+                self._features_rest,
+                self._scaling,
+                self._rotation,
+                self._opacity,
+                self.max_radii2D,
+                self.xyz_gradient_accum,
+                self.denom,
+                self.optimizer.state_dict(),
+                self.spatial_lr_scale,
+            )
+        
+        
     
     def restore(self, model_args, training_args):
         (self.active_sh_degree, 
@@ -240,7 +264,12 @@ class GaussianModel:
         denom,
         opt_dict, 
         self.spatial_lr_scale) = model_args
-        self._deformation.load_state_dict(deform_state)
+        
+        if self.gvc_testmode >= 4:
+            self._deformation_G2C.load_state_dict(deform_state[0])
+            self._deformation_C2L.load_state_dict(deform_state[1])
+        else:
+            self._deformation.load_state_dict(deform_state)
         self.training_setup(training_args)
         self.xyz_gradient_accum = xyz_gradient_accum
         self.denom = denom
@@ -403,7 +432,11 @@ class GaussianModel:
 
         # add 4DGS-related attributes
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
-        self._deformation = self._deformation.to("cuda") 
+        if self.gvc_testmode >= 4:
+            self._deformation_G2C = self._deformation_G2C.to("cuda")
+            self._deformation_C2L = self._deformation_C2L.to("cuda")
+        else:
+            self._deformation = self._deformation.to("cuda") 
         self._deformation_table = torch.gt(torch.ones((self.get_xyz.shape[0]),device="cuda"),0)
 
     '''
@@ -454,6 +487,79 @@ class GaussianModel:
         
         
         if self.use_feat_bank:
+            l = [
+                    {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                    {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                    {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                    {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                    {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                    {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+                    
+                    {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                    {'params': self.mlp_feature_bank.parameters(), 'lr': training_args.mlp_featurebank_lr_init, "name": "mlp_featurebank"},
+                    {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                    {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                    {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+            ]   
+            if self.gvc_dynamics != 0:
+                l.append({'params': [self._dynamics], 'lr': training_args.dynamics_lr_init, "name": "dynamics"})
+            
+            if self.gvc_testmode >= 4:
+                l.append({'params': list(self._deformation_G2C.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation_G2C"})
+                l.append({'params': list(self._deformation_G2C.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid_G2C"})
+                l.append({'params': list(self._deformation_C2L.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation_C2L"})
+                l.append({'params': list(self._deformation_C2L.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid_C2L"})
+            else: 
+                l.append({'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"})
+                l.append({'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"})
+            
+        elif self.appearance_dim > 0:
+            l = [
+                    {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                    {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                    {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                    {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                    {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                    {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+
+                    {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                    {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                    {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                    {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+  
+            ]
+            if self.gvc_dynamics != 0:
+                l.append({'params': [self._dynamics], 'lr': training_args.dynamics_lr_init, "name": "dynamics"})
+            
+            if self.gvc_testmode >= 4:
+                l.append({'params': list(self._deformation_G2C.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation_G2C"})
+                l.append({'params': list(self._deformation_G2C.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid_G2C"})
+                l.append({'params': list(self._deformation_C2L.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation_C2L"})
+                l.append({'params': list(self._deformation_C2L.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid_C2L"})
+            else: 
+                l.append({'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"})
+                l.append({'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"})
+        else: 
+            l = [
+                {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
+                {'params': [self._offset], 'lr': training_args.offset_lr_init * self.spatial_lr_scale, "name": "offset"},
+                {'params': [self._anchor_feat], 'lr': training_args.feature_lr, "name": "anchor_feat"},
+                {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+
+                {'params': self.mlp_opacity.parameters(), 'lr': training_args.mlp_opacity_lr_init, "name": "mlp_opacity"},
+                {'params': self.mlp_cov.parameters(), 'lr': training_args.mlp_cov_lr_init, "name": "mlp_cov"},
+                {'params': self.mlp_color.parameters(), 'lr': training_args.mlp_color_lr_init, "name": "mlp_color"},
+                {'params': self.embedding_appearance.parameters(), 'lr': training_args.appearance_lr_init, "name": "embedding_appearance"},
+
+                # 4DGS-related attributes
+                #{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+                {'params': list(self._deformation.get_mlp_parameters()), 'lr': training_args.deformation_lr_init * self.spatial_lr_scale, "name": "deformation"},
+                {'params': list(self._deformation.get_grid_parameters()), 'lr': training_args.grid_lr_init * self.spatial_lr_scale, "name": "grid"},
+                ]
+        
+            '''
             if self.gvc_dynamics != 0:
                 l = [
                     {'params': [self._anchor], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "anchor"},
@@ -555,7 +661,7 @@ class GaussianModel:
                
 
             ]
-
+        '''
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
         self.anchor_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
                                                     lr_final=training_args.position_lr_final*self.spatial_lr_scale,
@@ -681,15 +787,26 @@ class GaussianModel:
 
     def compute_deformation(self,time):
         # 이거 쓰임??
-        deform = self._deformation[:,:,:time].sum(dim=-1)
+        if self.gvc_testmode >= 4:
+            deform = self._deformation_C2L[:,:,:time].sum(dim=-1)
+        else:
+            deform = self._deformation[:,:,:time].sum(dim=-1)
         xyz = self._xyz + deform
         return xyz
 
     def load_model(self, path):
         print("loading model from exists{}".format(path))
-        weight_dict = torch.load(os.path.join(path,"deformation.pth"),map_location="cuda")
-        self._deformation.load_state_dict(weight_dict)
-        self._deformation = self._deformation.to("cuda")
+        if self.gvc_testmode >= 4:
+            weight_dict = torch.load(os.path.join(path,"deformation_G2C.pth"),map_location="cuda")
+            self._deformation_G2C.load_state_dict(weight_dict)
+            self._deformation_G2C = self._deformation_G2C.to("cuda")
+            weight_dict = torch.load(os.path.join(path,"deformation_C2L.pth"),map_location="cuda")
+            self._deformation_C2L.load_state_dict(weight_dict)
+            self._deformation_C2L = self._deformation_C2L.to("cuda")
+        else:
+            weight_dict = torch.load(os.path.join(path,"deformation.pth"),map_location="cuda")           
+            self._deformation.load_state_dict(weight_dict)
+            self._deformation = self._deformation.to("cuda")
         self._deformation_table = torch.gt(torch.ones((self.get_xyz.shape[0]),device="cuda"),0)
         self._deformation_accum = torch.zeros((self.get_xyz.shape[0],3),device="cuda")
         if os.path.exists(os.path.join(path, "deformation_table.pth")):
@@ -699,7 +816,11 @@ class GaussianModel:
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
         # print(self._deformation.deformation_net.grid.)
     def save_deformation(self, path):
-        torch.save(self._deformation.state_dict(),os.path.join(path, "deformation.pth"))
+        if self.gvc_testmode >= 4:
+            torch.save(self._deformation_G2C.state_dict(),os.path.join(path, "deformation_G2C.pth"))
+            torch.save(self._deformation_C2L.state_dict(),os.path.join(path, "deformation_C2L.pth"))
+        else:
+            torch.save(self._deformation.state_dict(),os.path.join(path, "deformation.pth"))
         torch.save(self._deformation_table,os.path.join(path, "deformation_table.pth"))
         torch.save(self._deformation_accum,os.path.join(path, "deformation_accum.pth"))
 
@@ -793,13 +914,16 @@ class GaussianModel:
         offsets = offsets.reshape((offsets.shape[0], 3, -1))
         
         # dynamics
-        if self.gvc_dynamics != 0:    
-            dynamics_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("dynamics")]
-            dynamics_names = sorted(dynamics_names, key = lambda x: int(x.split('_')[-1]))
-            dynamics = np.zeros((anchor.shape[0], len(dynamics_names)))
-            for idx, attr_name in enumerate(dynamics_names):
-                dynamics[:, idx] = np.asarray(plydata.elements[0][attr_name]).astype(np.float32)
-                    
+        if self.gvc_dynamics != 0: 
+            if self.gvc_dynamics <= 6:
+                dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
+            else:
+                dynamics_names = [p.name for p in plydata.elements[0].properties if p.name.startswith("dynamics")]
+                dynamics_names = sorted(dynamics_names, key = lambda x: int(x.split('_')[-1]))
+                dynamics = np.zeros((anchor.shape[0], len(dynamics_names)))
+                for idx, attr_name in enumerate(dynamics_names):
+                    dynamics[:, idx] = np.asarray(plydata.elements[0][attr_name]).astype(np.float32)
+                        
         
                     
             #dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
@@ -1452,7 +1576,10 @@ class GaussianModel:
                         print(name," :",weight.grad.mean(), weight.grad.min(), weight.grad.max())
         print("-"*50)
     def _plane_regulation(self):
-        multi_res_grids = self._deformation.deformation_net.grid.grids
+        if self.gvc_testmode >= 4:
+            multi_res_grids = self._deformation_C2L.deformation_net.grid.grids
+        else: 
+            multi_res_grids = self._deformation.deformation_net.grid.grids
         total = 0
         # model.grids is 6 x [1, rank * F_dim, reso, reso]
         for grids in multi_res_grids:
@@ -1464,7 +1591,11 @@ class GaussianModel:
                 total += compute_plane_smoothness(grids[grid_id])
         return total
     def _time_regulation(self):
-        multi_res_grids = self._deformation.deformation_net.grid.grids
+        #multi_res_grids = self._deformation.deformation_net.grid.grids
+        if self.gvc_testmode >= 4:
+            multi_res_grids = self._deformation_C2L.deformation_net.grid.grids
+        else: 
+            multi_res_grids = self._deformation.deformation_net.grid.grids
         total = 0
         # model.grids is 6 x [1, rank * F_dim, reso, reso]
         for grids in multi_res_grids:
@@ -1477,7 +1608,11 @@ class GaussianModel:
         return total
     def _l1_regulation(self):
                 # model.grids is 6 x [1, rank * F_dim, reso, reso]
-        multi_res_grids = self._deformation.deformation_net.grid.grids
+        #multi_res_grids = self._deformation.deformation_net.grid.grids
+        if self.gvc_testmode >= 4:
+            multi_res_grids = self._deformation_C2L.deformation_net.grid.grids
+        else: 
+            multi_res_grids = self._deformation.deformation_net.grid.grids
 
         total = 0.0
         for grids in multi_res_grids:

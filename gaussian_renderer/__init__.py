@@ -511,7 +511,14 @@ def render_test4(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
             
             anchor_final, feat_final, grid_offsets_final, grid_scaling_final = pc._deformation_C2L(anchor, feat, grid_offsets, grid_scaling, dynamics, time)
             
-            
+             # deform된 anchor와 feat를 가지고 neural gaussian을 생성
+            if is_training:
+                means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+            else:
+                means3D_final, color, opacity_final, scales_final, rotations_final = \
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+
             #neural_opacity = opacity_final
                                                                 
             

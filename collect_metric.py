@@ -13,7 +13,11 @@ def get_folder_list(dataset):
     elif dataset == "dynerf":
         # coffee_martini, cook_spinach, cut_roasted_beef, flame_salmon_1, flame_steak, sear_steak
         folder_list = ["coffee_martini", "cook_spinach", "cut_roasted_beef", "flame_salmon_1", "flame_steak", "sear_steak"]
-        
+    elif dataset == "nvidia":
+        # coffee_martini, cook_spinach, cut_roasted_beef, flame_salmon_1, flame_steak, sear_steak
+        folder_list = ["Balloon1", "Balloon2", "Jumping", "Playground", "Skating", "Truck", "Umbrella"]
+    
+       
     return folder_list
 
 

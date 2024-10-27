@@ -86,7 +86,17 @@ class GaussianModel:
         self.gvc_testmode = gvc_params["GVC_testmode"]
         self.gvc_dynamics = gvc_params["GVC_Dynamics"]
         
-               
+        if self.gvc_testmode >= 5:
+            # canonical times temporal adjustment 반영
+            self.num_segments = gvc_params["GVC_num_of_segments"]
+            self.canonical_times = torch.empty(0)
+            self.init_canonical_tiems()
+            
+            # canonical_times와 동일한 길이를 가지면서 두번째 dimension이 2인 tensor
+            #self.canonical_times_loss_accum = torch.zeros((self.canonical_times.shape[0]-1, 2), device="cuda")
+            
+            # canonical_times와 동일한 길이를 가지면서 두번째 dimension이 1인 tensor
+            self.canonical_times_grad_accum = torch.zeros((self.canonical_times.shape[0]-1, 1), device="cuda")
 
         self._anchor = torch.empty(0)
         self._offset = torch.empty(0)
@@ -145,7 +155,7 @@ class GaussianModel:
             self._deformation = deform_network(args)
         elif self.gvc_testmode == 2 or self.gvc_testmode == 3:
             self._deformation = deform_network_scaffold(args, gvc_params)
-        elif self.gvc_testmode == 4:
+        elif self.gvc_testmode == 4 or self.gvc_testmode == 5:
             self._deformation_G2C = deform_network_scaffold(args,gvc_params, deform_stage="global")
             if gvc_params["GVC_local_deform_method"] == "explicit":
                 self._deformation_C2L = deform_network(args, deform_stage="local")
@@ -324,6 +334,14 @@ class GaussianModel:
         torch.cuda.empty_cache()
         self._anchor = new_anchor
 
+    @property
+    def get_canonical_times(self):
+        return self.canonical_times
+    
+    @property
+    def get_canonical_times_loss_accum(self):
+        return self.canonical_times_loss_accum
+    
     # To here
 
     #@property
@@ -474,6 +492,19 @@ class GaussianModel:
                                                     max_steps=training_args.position_lr_max_steps)    
     '''
 
+    def init_canonical_tiems(self):
+        segment_time = 1.0/self.num_segments
+        self.canonical_times = torch.arange(0.0, 1.0, segment_time).cuda()
+        
+    def get_canonical_time(self, time_base):
+        self.canonical_time = min(self.canonical_times, key=lambda x:abs(x-time_base))
+        # 만약 canonical_time이 time_base보다 크면 canonical_time - segment 길이
+        if self.canonical_time > time_base:
+            return self.canonical_time - 1.0/self.num_segments
+        else:
+            return self.canonical_time
+
+    
 
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense

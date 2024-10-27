@@ -200,11 +200,9 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
         radii_list = []
         visibility_filter_list = []
         viewspace_point_tensor_list = []
-               
-        
-        # 
-        ######## 여기서부터가 실제적인 loop #########
-        #         
+    
+
+        ######## 여기서부터가 실제적인 loop #########         
         for viewpoint_cam in viewpoint_cams: 
             # viewpoint_cam은 Camear() class의 인스턴스의 list, 이 중 하나씩 꺼냄
             # Camera() is a class that contains the camera parameters
@@ -214,13 +212,8 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 # original 4DGS code
                 render_pkg = render_original(viewpoint_cam, gaussians, pipe, 
                                     background, stage=stage,cam_type=scene.dataset_type)
-            else:             
+            elif gvc_params["GVC_testmode"] >= 1 and gvc_params["GVC_testmode"] <= 5:        
                 # testmode 1: initial_frame: scaffold-GS, others:
-
-                """
-                pre-filtering voxel
-                """
-            
                 voxel_visible_mask = prefilter_voxel(viewpoint_cam, gaussians, pipe, background)
                 #voxel_visible_mask=None
                 #print(f"voxel_visible_mask: {voxel_visible_mask.sum()}")
@@ -229,7 +222,9 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 render_pkg = render(gvc_params, viewpoint_cam, gaussians, pipe, 
                                     background, stage=stage,cam_type=scene.dataset_type, 
                                     visible_mask=voxel_visible_mask, retain_grad=retain_grad)
-
+                
+            else:
+                raise ValueError("Unsupported GVC testmode")
 
             # gaussians: scene.guaussian_model.GaussianModel 오브젝트
             # pipe: pipeline_params.PipelineParams 오브젝트
@@ -445,8 +440,25 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                     print("reset opacity")
                     gaussians.reset_opacity()
             '''
-            
 
+            # temporal adjustment
+            if stage == "fine" and gvc_params["GVC_testmode"] >= 5:
+                # 만약 timestamp가 canonical time 중에 하나라면, deformation table의 gradient 총 합을 저장
+                if viewpoint_cam.time in gaussians.canonical_times:
+                    deformation_C2L_grad_sum = 0
+                    for name, weight in gaussians._deformation_C2L.named_parameters():
+                        if weight.requires_grad and weight.grad is not None:
+                            deformation_C2L_grad_sum += weight.grad.abs().sum()
+
+                    # timestamp가 canonical time 중에 몇 번째 element?
+                    idx = (viewpoint_cam.time == gaussians.canonical_times)
+                    gaussians.canonical_times_grad_accum[idx[1:]] += deformation_C2L_grad_sum
+                
+            # 1000번 마다
+            if stage == "fine" and iteration % 1000 == 0:
+                print(gaussianss.canonical_times_grad_accum)
+                
+        
             # Optimizer step
             if iteration < opt.iterations:
                 gaussians.optimizer.step()
@@ -455,6 +467,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             if (iteration in checkpoint_iterations):
                 print("\n[ITER {}] Saving Checkpoint".format(iteration))
                 torch.save((gaussians.capture(), iteration), scene.model_path + "/chkpnt" +f"_{stage}_" + str(iteration) + ".pth")
+                
 def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from, expname, gvc_params):
     # first_iter = 0
     tb_writer = prepare_output_and_logger(expname)
@@ -471,7 +484,7 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
                                   dataset.use_feat_bank, dataset.appearance_dim, dataset.ratio, 
                                   dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist, gvc_params)
         # print(dataset.add_opacity_dist, dataset.add_cov_dist, dataset.add_color_dist) # False, False, False
-    elif gvc_params["GVC_testmode"] == 2 or gvc_params["GVC_testmode"] == 3 or gvc_params["GVC_testmode"] == 4: 
+    elif gvc_params["GVC_testmode"] == 2 or gvc_params["GVC_testmode"] == 3 or gvc_params["GVC_testmode"] == 4 or gvc_params["GVC_testmode"] == 5: 
     # testmode 2: initial_frame: scaffold-GS, deformation: anchor points and local context features
         gaussians = GaussianModel(hyper, dataset.feat_dim, dataset.n_offsets, dataset.voxel_size, 
                                   dataset.update_depth, dataset.update_init_factor, dataset.update_hierachy_factor, 
@@ -494,7 +507,7 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
         scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
                             checkpoint_iterations, checkpoint, debug_from,
                             gaussians, scene, "fine", tb_writer, opt.iterations,timer, gvc_params)
-    elif gvc_params["GVC_testmode"] == 4:      
+    elif gvc_params["GVC_testmode"] >= 4:      
         scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
                                 checkpoint_iterations, checkpoint, debug_from,
                                 gaussians, scene, "coarse", tb_writer, opt.coarse_iterations,timer, gvc_params)

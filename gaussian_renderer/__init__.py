@@ -19,9 +19,9 @@ from time import time as get_time
 
 
 def render(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, 
-           override_color = None, stage="fine", cam_type=None, visible_mask=None, retain_grad=False):
+           override_color = None, stage="fine", cam_type=None, visible_mask=None, retain_grad=False, canonical_times=None):
 
-    # common pass of render function
+    # common path of render function
     # GVC testmode에 따라서 render 함수를 호출하는 방식이 달라짐
 
     is_training = pc.get_color_mlp.training
@@ -66,6 +66,15 @@ def render(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_color : to
                 gvc_params, viewpoint_camera, pc, pipe, bg_color, scaling_modifier, override_color, stage, cam_type, visible_mask, retain_grad)
         else:
             rendered_image, screenspace_points, radii, depth = render_test4(
+                gvc_params, viewpoint_camera, pc, pipe, bg_color, scaling_modifier, override_color, stage, cam_type, visible_mask, retain_grad)
+
+    elif gvc_params["GVC_testmode"] == 5:
+        # Feature deformation + learnable dynamics + temporal scaffolding + temporal adjustment
+        if is_training:
+            rendered_image, screenspace_points, radii, mask, neural_opacity, scaling, depth = render_test5(
+                gvc_params, viewpoint_camera, pc, pipe, bg_color, scaling_modifier, override_color, stage, cam_type, visible_mask, retain_grad)
+        else:
+            rendered_image, screenspace_points, radii, depth = render_test5(
                 gvc_params, viewpoint_camera, pc, pipe, bg_color, scaling_modifier, override_color, stage, cam_type, visible_mask, retain_grad)
     
     
@@ -446,7 +455,148 @@ def generate_neural_gaussians_v2(viewpoint_camera, pc : GaussianModel, visible_m
 
 
 
-# GVC test mode 3일 때 호출되는 render 함수
+# GVC test mode 5일 때 호출되는 render 함수
+def render_test5(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0,
+              override_color = None, stage="fine", cam_type=None, visible_mask=None, retain_grad=False):
+    
+    is_training = pc.get_color_mlp.training   
+    anchor = pc.get_anchor # ([10562, 3])
+    feat = pc._anchor_feat # ([10562, 32])   
+    grid_offsets = pc._offset # ([10562, 10, 3])
+    grid_scaling = pc.get_scaling # ([10562, 6])
+   
+        
+    if "coarse" in stage:   
+        if is_training:
+            means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+        else:
+            means3D_final, color, opacity_final, scales_final, rotations_final = \
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+    
+    elif "fine" in stage:
+
+        # 변수 초기화
+        if gvc_params["GVC_Dynamics"] != 0:
+            dynamics = pc._dynamics # ([10562, 1]) or ([10562, 2])
+        else:
+            dynamics = None
+        
+        # time 정보 처리 부분
+        if cam_type != "PanopticSports":
+            time_base = viewpoint_camera.time # 0~1 사이의 float 값
+        else:
+            time_base = viewpoint_camera['time']
+        
+        # canonical time을 받아옴
+        canonical_time = pc.get_canonical_time(time_base)
+        
+        time = torch.tensor(time_base).to(anchor.device).repeat(anchor.shape[0],1) # time을 anchor 길이 만큼만 repeat
+        canonical_time = torch.tensor(canonical_time).to(anchor.device).repeat(anchor.shape[0],1) # canonical_time을 anchor 길이 만큼만 repeat
+
+        ###### Global-to-Local hierarchical deformation ######
+        # Deformation 1: global to canonical
+        # Feature deformation only
+        anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed = pc._deformation_G2C(anchor, feat, grid_offsets, grid_scaling, dynamics, canonical_time)
+               
+        # Deformation 2: canonical to local
+        if gvc_params["GVC_local_deform_method"] == "explicit": # explicit(gaussian) or implicit(feature)
+            
+            # deform된 anchor와 feat를 가지고 neural gaussian을 생성
+            if is_training:
+                means3D, color, opacity, scales, rotations, neural_opacity, mask = \
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+            else:
+                means3D, color, opacity, scales, rotations = \
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+
+            shs = None
+            time = torch.tensor(time_base).to(means3D.device).repeat(means3D.shape[0],1)
+            means3D_final, scales_final, rotations_final, opacity_final, shs_final = pc._deformation_C2L(means3D, scales,
+                                                                    rotations, opacity, shs, time)
+
+        elif gvc_params["GVC_local_deform_method"] == "implicit":
+
+            # anchor feature deformation을 먼저 함
+            
+            anchor_final, feat_final, grid_offsets_final, grid_scaling_final = pc._deformation_C2L(anchor, feat, grid_offsets, grid_scaling, dynamics, time)
+            
+             # deform된 anchor와 feat를 가지고 neural gaussian을 생성
+            if is_training:
+                means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+            else:
+                means3D_final, color, opacity_final, scales_final, rotations_final = \
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+
+            #neural_opacity = opacity_final
+                                                                
+            
+    # 이후 과정은 공통임
+    # screenspace point 생성    
+    screenspace_points = torch.zeros_like(means3D_final, dtype=pc.get_anchor.dtype, requires_grad=True, device="cuda") + 0
+    try:
+        screenspace_points.retain_grad()
+    except:
+        pass
+    
+    # Set up rasterization configuration
+    if cam_type != "PanopticSports": # 
+        tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
+        tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
+        raster_settings = GaussianRasterizationSettings(
+            image_height=int(viewpoint_camera.image_height),
+            image_width=int(viewpoint_camera.image_width),
+            tanfovx=tanfovx,
+            tanfovy=tanfovy,
+            bg=bg_color,
+            scale_modifier=scaling_modifier,
+            viewmatrix=viewpoint_camera.world_view_transform.cuda(),
+            projmatrix=viewpoint_camera.full_proj_transform.cuda(),
+            #sh_degree=pc.active_sh_degree,
+            sh_degree=1,
+            campos=viewpoint_camera.camera_center.cuda(),
+            prefiltered=False,
+            debug=pipe.debug
+        )
+    else:
+        raster_settings = viewpoint_camera['camera'] 
+        
+    rasterizer = GaussianRasterizer(raster_settings=raster_settings)
+
+    means2D = screenspace_points 
+    shs_final = None
+    cov3D_precomp = None
+    
+    if pipe.compute_cov3D_python: # False임
+        cov3D_precomp = pc.get_covariance(scaling_modifier)
+    
+    # 얘는 무조건 함
+    rotations_final = pc.rotation_activation(rotations_final)
+
+    # 1인경우 activation 하도록    
+    if gvc_params["GVC_Opacity_Activation"] == 1:
+        opacity_final = pc.opacity_activation(opacity_final)
+        
+    rendered_image, radii, depth = rasterizer(
+        means3D = means3D_final,
+        means2D = means2D,
+        shs = shs_final,
+        colors_precomp = color,
+        opacities = opacity_final,
+        scales = scales_final,
+        rotations = rotations_final,
+        cov3D_precomp = cov3D_precomp)
+    
+    
+    if is_training:
+        return rendered_image, screenspace_points, radii, mask, neural_opacity, scales_final, depth
+    else:
+        return rendered_image, screenspace_points, radii, depth
+
+
+
+# GVC test mode 4일 때 호출되는 render 함수
 def render_test4(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0,
               override_color = None, stage="fine", cam_type=None, visible_mask=None, retain_grad=False):
     

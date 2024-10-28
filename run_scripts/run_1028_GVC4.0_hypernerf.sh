@@ -105,7 +105,7 @@ else
 	train=$4
 fi
 
-dataset=nvidia
+dataset=hypernerf
 test_version=GVC_v$config_number
 output_path=${date}_${dataset}_${test_version}
 
@@ -113,24 +113,26 @@ cd ..
 
 for scene in $scenes; do
 
+	scene_path=$(echo $scnen_paths | cut -d' ' -f$((idx+1)))
+
 	echo "########################################"
 	echo "scene: "$scene
 	echo "config: "$config
 	echo "GPU" $GPU_id
 	echo "########################################"
 
-	bash colmap.sh data/${dataset}/${scene_path} ${dataset}
+	#bash colmap.sh data/${dataset}/${scene_path} ${dataset}
 
 	#Third, downsample the point clouds generated in the second step.
 	#echo "Downsampling the point cloud"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python scripts/downsample_point.py data/${dataset}/${scene}/colmap/dense/workspace/fused.ply data/${dataset}/${scene}/points3D_downsample2.ply
+	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python scripts/downsample_point.py data/${dataset}/${scene_path}/colmap/dense/workspace/fused.ply data/${dataset}/${scene_path}/points3D_downsample2.ply
 	
 	# 만약 $train이 1이 아니면 skip
 	if [ $train == 1 ]
 	then
 		# Finally, train.
 		echo "Training the model"
-		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py
+		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene_path} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py
 	else
 		echo "Skip training"
 	fi

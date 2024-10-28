@@ -35,7 +35,7 @@ ModelHiddenParams = dict(
     grid_scale_deform = True,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함    
+    deform_n_offsets = 20, # ModelParams의 n_offsets과 일치시켜야 함    
     dynamics_activation = "sigmoid", 
     
 
@@ -43,7 +43,7 @@ ModelHiddenParams = dict(
 
 ModelParams = dict(
     appearance_dim = 0,
-    n_offsets = 10, 
+    n_offsets = 20, 
     use_feat_bank = False, 
     #voxel_size = 0.0005,
     voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001

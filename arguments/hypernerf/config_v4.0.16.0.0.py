@@ -59,7 +59,7 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 2, 
+    num_of_segments = 16, 
     local_deform_method = "explicit",
  
 )

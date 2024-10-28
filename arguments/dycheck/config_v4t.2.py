@@ -46,7 +46,7 @@ ModelParams = dict(
     n_offsets = 10, 
     use_feat_bank = False, 
     #voxel_size = 0.0005,
-    voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001
+    voxel_size = 0.005, # voxel size를 줄여봄. 기본값은 0.001
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
     
     scale_activation = 1,

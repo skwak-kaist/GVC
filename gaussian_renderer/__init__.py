@@ -454,7 +454,6 @@ def generate_neural_gaussians_v2(viewpoint_camera, pc : GaussianModel, visible_m
         return xyz, color, opacity, scaling, rot
 
 
-
 # GVC test mode 5일 때 호출되는 render 함수
 def render_test5(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0,
               override_color = None, stage="fine", cam_type=None, visible_mask=None, retain_grad=False):

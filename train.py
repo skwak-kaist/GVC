@@ -400,6 +400,11 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 del gaussians.offset_denom
                 torch.cuda.empty_cache()
             
+            # Temporal adjustment
+            if stage == "fine" and gvc_params["GVC_testmode"] >= 5:
+                if iteration < opt.temporal_adjustment_until and iteration > opt.temporal_adjustment_from:
+            
+            
             '''
             if iteration < opt.densify_until_iter :
 
@@ -440,7 +445,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                     print("reset opacity")
                     gaussians.reset_opacity()
             '''
-
+            '''
             # temporal adjustment
             if stage == "fine" and gvc_params["GVC_testmode"] >= 5:
                 # 만약 timestamp가 canonical time 중에 하나라면, deformation table의 gradient 총 합을 저장
@@ -454,9 +459,10 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                     idx = (viewpoint_cam.time == gaussians.canonical_times)
                     gaussians.canonical_times_grad_accum[idx[1:]] += deformation_C2L_grad_sum
                 
-            # 1000번 마다
-            if stage == "fine" and iteration % 1000 == 0:
-                print(gaussianss.canonical_times_grad_accum)
+                # 1000번 마다
+                if iteration % 5000 == 0:
+                    print(gaussians.canonical_times_grad_accum)
+            '''
                 
         
             # Optimizer step

@@ -331,7 +331,11 @@ class OptimizationParams(ParamGroup):
         self.success_threshold = 0.8
         self.densify_grad_threshold = 0.0002
 
-
+        # for temporal adjustment
+        self.temporal_adjustment_until = 45_000
+        self.temporal_adjustment_from = 3000
+        
+        
         # for dynamics
         #self.dynamics_loss = "entropy"
         self.dynamics_loss = None

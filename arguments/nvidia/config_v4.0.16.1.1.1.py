@@ -5,8 +5,9 @@ ModelHiddenParams = dict(
      'grid_dimensions': 2,
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
-     #'resolution': [64, 64, 64, 150]
-     'resolution': [32, 32, 32, 10]
+     #'resolution': [64, 64, 64, 150],
+#     'resolution': [32, 32, 32, 10],
+     'resolution': [64, 64, 64, 20]
     },
 #    multires = [1,2,4],
     multires = [1,2],
@@ -15,8 +16,8 @@ ModelHiddenParams = dict(
      'grid_dimensions': 2,
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
-     #'resolution': [64, 64, 64, 150]
-     'resolution': [64, 64, 64, 100]
+     'resolution': [64, 64, 64, 150]
+     #'resolution': [64, 64, 64, 100]
     },
 #    multires = [1,2,4],
     multires_local = [1,2],
@@ -42,7 +43,7 @@ ModelHiddenParams = dict(
 )
 
 ModelParams = dict(
-    appearance_dim = 0,
+    appearance_dim = 16,
     n_offsets = 10, 
     use_feat_bank = False, 
     #voxel_size = 0.0005,
@@ -59,7 +60,7 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 2, 
+    num_of_segments = 16, 
     local_deform_method = "explicit",
  
 )

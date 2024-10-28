@@ -1,7 +1,7 @@
 
 
 workdir=$1
-datatype=$2 # blender, hypernerf, llff
+datatype=$2 # blender, hypernerf, llff, nvidia, dycheck
 export CUDA_VISIBLE_DEVICES=0
 
 #$workdir/rgb/1x 에 있는 png 이미지 전체를 가로 1/2, 세로 1/2로 줄여서 $workdir/rgb/2x에 저장

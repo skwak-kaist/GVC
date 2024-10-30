@@ -400,12 +400,15 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 del gaussians.offset_denom
                 torch.cuda.empty_cache()
             
-            '''
+            
             # Temporal adjustment
             if stage == "fine" and gvc_params["GVC_testmode"] >= 5:
                 # iteration이 temporal_adjustment_until과 temporal_adjustment_from 사이에 있을때만 수행
-                if iteration < opt.temporal_adjustment_until and iteration > opt.temporal_adjustment_from:
-            '''
+                #if iteration < opt.temporal_adjustment_until and iteration > opt.temporal_adjustment_from:
+                gaussians.temporal_adjustment_statistic(viewpoint_cam.time, viewspace_point_tensor, visibility_filter)
+            
+                if iteration % opt.temporal_adjustment_interval == 0:
+                    gaussians.temporal_adjustment(check_interval=opt.temporal_adjustment_interval, temporal_adjustment_threshold=opt.temporal_adjustment_threshold)
             
             '''
             if iteration < opt.densify_until_iter :

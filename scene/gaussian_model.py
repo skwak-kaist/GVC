@@ -85,18 +85,25 @@ class GaussianModel:
         # GVC parameters
         self.gvc_testmode = gvc_params["GVC_testmode"]
         self.gvc_dynamics = gvc_params["GVC_Dynamics"]
+        self.gvc_temporal_adjustment = gvc_params["GVC_temporal_adjustment"]
         
-        if self.gvc_testmode >= 5:
+        if self.gvc_temporal_adjustment:
             # canonical times temporal adjustment 반영
             self.num_segments = gvc_params["GVC_num_of_segments"]
             self.canonical_times = torch.empty(0)
-            self.init_canonical_tiems()
+            self.init_canonical_times()
+            
             
             # canonical_times와 동일한 길이를 가지면서 두번째 dimension이 2인 tensor
             #self.canonical_times_loss_accum = torch.zeros((self.canonical_times.shape[0]-1, 2), device="cuda")
             
-            # canonical_times와 동일한 길이를 가지면서 두번째 dimension이 1인 tensor
+            # canonical_times 보다 하나 적인 길이를 가지는 tensor (canonical_times의 각 segment의 gradient를 누적)
             self.canonical_times_grad_accum = torch.zeros((self.canonical_times.shape[0]-1, 1), device="cuda")
+            self.canonical_times_denom = torch.zeros((self.canonical_times.shape[0]-1, 1), device="cuda")
+            
+            self.step = gvc_params["GVC_temporal_adjustment_step_size"] # temporal segment를 어느정도로 이동시킬 것인지
+            self.temporal_adjust_threshold = gvc_params["GVC_temporal_adjustment_threshold"] # 1 sigma 이상일 경우 모두 shift
+            self.temporal_adjust_step_size = 1.0/ (self.num_segments) * self.step
 
         self._anchor = torch.empty(0)
         self._offset = torch.empty(0)
@@ -492,7 +499,7 @@ class GaussianModel:
                                                     max_steps=training_args.position_lr_max_steps)    
     '''
 
-    def init_canonical_tiems(self):
+    def init_canonical_times(self):
         segment_time = 1.0/self.num_segments
         self.canonical_times = torch.arange(0.0, 1.0, segment_time).cuda()
         
@@ -889,23 +896,26 @@ class GaussianModel:
         offset = self._offset.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
         opacities = self._opacity.detach().cpu().numpy()
         scale = self._scaling.detach().cpu().numpy()
-        rotation = self._rotation.detach().cpu().numpy()
+        rotation = self._rotation.detach().cpu().numpy()    
 
         if self.gvc_dynamics != 0:
             dynamics = self._dynamics.detach().cpu().numpy()
+
+        if self.gvc_temporal_adjustment:
+            self.save_canonical_times(os.path.join(os.path.dirname(path), "canonical_times.npy"))
 
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(anchor.shape[0], dtype=dtype_full)
         
+        attributes = np.concatenate((anchor, normals, offset, anchor_feat, opacities, scale, rotation), axis=1)
+        
         if self.gvc_dynamics != 0:
-            attributes = np.concatenate((anchor, normals, offset, anchor_feat, opacities, scale, rotation, dynamics), axis=1)
-        else:
-            attributes = np.concatenate((anchor, normals, offset, anchor_feat, opacities, scale, rotation), axis=1)
+            attributes = np.concatenate((attributes, dynamics), axis=1)
+        
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
-
 
 
     def reset_opacity(self):
@@ -958,7 +968,7 @@ class GaussianModel:
                 dynamics = np.zeros((anchor.shape[0], len(dynamics_names)))
                 for idx, attr_name in enumerate(dynamics_names):
                     dynamics[:, idx] = np.asarray(plydata.elements[0][attr_name]).astype(np.float32)
-                        
+                                   
         
                     
             #dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
@@ -976,10 +986,21 @@ class GaussianModel:
         if self.gvc_dynamics != 0:
             self._dynamics = nn.Parameter(torch.tensor(dynamics, dtype=torch.float, device="cuda").requires_grad_(True))
 
+    def save_canonical_times(self, path):
+        canonical_times = self.canonical_times.detach().cpu().numpy()
+        np.save(path, canonical_times)
+
+
+    def load_canonical_times(self, path):
+        canonical_times = np.load(path)
+        self.canonical_times = nn.Parameter(torch.tensor(canonical_times, dtype=torch.float, device="cuda"))
 
     # 4DGS
     def load_ply(self, path):
         plydata = PlyData.read(path)
+
+        if self.gvc_temporal_adjustment:
+            self.load_canonical_times(os.path.join(os.path.dirname(path), "canonical_times.npy"))
 
         xyz = np.stack((np.asarray(plydata.elements[0]["x"]),
                         np.asarray(plydata.elements[0]["y"]),
@@ -1090,6 +1111,47 @@ class GaussianModel:
         self.offset_gradient_accum[combined_mask] += grad_norm
         self.offset_denom[combined_mask] += 1
 
+    def temporal_adjustment_statistic(self, time, viewspace_point_tensor, update_filter):
+        # time이 속하는 canonical time 구간 찾는다.
+        canonical_time = self.get_canonical_time(time)
+        idx = (canonical_time == self.canonical_times)
+        
+        # view space point tensor의 gradient를 이용하여 temporal adjustment를 계산한다.
+        grad_norm = torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
+        
+        self.canonical_times_grad_accum[idx[1:]] += grad_norm.sum()
+        self.canonical_times_denom[idx[1:]] += 1
+        
+    def temporal_adjustment(self):
+        
+        grads = self.canonical_times_grad_accum / self.canonical_times_denom
+        grads[grads.isnan()] = 0.0
+        grads_norm = torch.norm(grads, dim=-1)
+        #time_mask = (self.canonical_times_denom > check_interval*temporal_adjustment_threshold).squeeze(dim=1)
+        
+        grad_statistics_mean = grads_norm.mean()
+        grad_statistics_std = grads_norm.std()
+        grad_statistics_threshold = grad_statistics_mean + grad_statistics_std * self.temporal_adjust_threshold # 1 sigma 이상
+        
+        # grad가 threshold 이상인 canonical time을 찾는다.
+        time_mask = (grads_norm > grad_statistics_threshold)
+        
+        for t in range(len(time_mask)):
+            if time_mask[t]: # True에 대해서, 
+                if t != len(time_mask) - 1:
+                    update_canonical_time = self.canonical_times[t + 1] - self.temporal_adjust_step_size
+                    if update_canonical_time > self.canonical_times[t]:
+                        self.canonical_times[t + 1] = update_canonical_time
+                
+                if t != 0:
+                    update_canonical_time = self.canonical_times[t - 1] + self.temporal_adjust_step_size
+                    if update_canonical_time < self.canonical_times[t]:
+                        self.canonical_times[t - 1] = update_canonical_time
+        
+        # 초기화
+        self.canonical_times_grad_accum = torch.zeros_like(self.canonical_times_grad_accum)
+        self.canonical_times_denom = torch.zeros_like(self.canonical_times_denom) 
+        
 
     # Scaffold-GS
     def _prune_anchor_optimizer(self, mask):

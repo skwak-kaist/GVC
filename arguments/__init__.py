@@ -119,6 +119,11 @@ class ModelParams(ParamGroup):
         
         self.temporal_scaffolding = 1 # 0: off 1: uniform scaffolding 2: adaptive scaffolding
         self.local_deform_method = "explicit" # explicit(gaussian) or implicit(feature)
+        
+        # GVC 5.0
+        self.temporal_adjustment = 1
+        self.temporal_adjustment_step_size = 0.1
+        self.temporal_adjustment_threshold = 1.0
 
         super().__init__(parser, "Loading Parameters", sentinel)
 
@@ -133,6 +138,9 @@ class ModelParams(ParamGroup):
         gvc_params["GVC_num_of_segments"] = args.num_of_segments
         gvc_params["GVC_temporal_scaffolding"] = args.temporal_scaffolding
         gvc_params["GVC_local_deform_method"] = args.local_deform_method
+        gvc_params["GVC_temporal_adjustment"] = args.temporal_adjustment
+        gvc_params["GVC_temporal_adjustment_step_size"] = args.temporal_adjustment_step_size
+        gvc_params["GVC_temporal_adjustment_threshold"] = args.temporal_adjustment_threshold
         
         print("GVC_testmode: ", gvc_params["GVC_testmode"])
         print("GVC_Scale_Activation: ", gvc_params["GVC_Scale_Activation"])
@@ -142,6 +150,7 @@ class ModelParams(ParamGroup):
         print("GVC_num_of_segments: ", gvc_params["GVC_num_of_segments"])
         print("GVC_temporal_scaffolding: ", gvc_params["GVC_temporal_scaffolding"])
         print("GVC_local_deform_method: ", gvc_params["GVC_local_deform_method"])
+        print("GVC_temporal_adjustment: ", gvc_params["GVC_temporal_adjustment"])
                         
         return gvc_params
 
@@ -334,8 +343,8 @@ class OptimizationParams(ParamGroup):
         # for temporal adjustment
         self.temporal_adjustment_until = 45_000
         self.temporal_adjustment_from = 3000
-        
-        
+        self.temporal_adjustment_interval = 1000
+            
         # for dynamics
         #self.dynamics_loss = "entropy"
         self.dynamics_loss = None

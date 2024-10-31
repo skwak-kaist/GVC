@@ -295,7 +295,7 @@ class OptimizationParams(ParamGroup):
         # dynamic masks
         self.dynamics_lr = 0.01
         self.dynamics_lr_init = 0.01
-        self.lambda_dynamics = 0.0005
+        self.lambda_dynamics = 0.0002
         
         self.mlp_opacity_lr_init = 0.002
         self.mlp_opacity_lr_final = 0.00002  

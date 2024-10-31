@@ -408,7 +408,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                 gaussians.temporal_adjustment_statistic(viewpoint_cam.time, viewspace_point_tensor, visibility_filter)
             
                 if iteration % opt.temporal_adjustment_interval == 0:
-                    gaussians.temporal_adjustment(check_interval=opt.temporal_adjustment_interval, temporal_adjustment_threshold=opt.temporal_adjustment_threshold)
+                    gaussians.temporal_adjustment()
             
             '''
             if iteration < opt.densify_until_iter :

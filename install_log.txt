@@ -28,8 +28,13 @@ pip install -e submodules/depth-diff-gaussian-rasterization
 pip install -e submodules/simple-knn
 
 
+pip install jax
+conda install jaxlib
+pip install gin
+pip install gin-config==0.1.1
+pip install ffmpeg
+pip install tensorflow
+pip install tensorflow_graphics
+pip install --upgrade -q gin git+https://github.com/google/trax.git@v1.2.3
 
-
-
-
-
+submodules에 2개 복사

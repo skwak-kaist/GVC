@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 14000 # iteration만 낮춘 버,
+    iterations = 14000, # iteration만 낮춘 버,
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,

@@ -71,10 +71,10 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 14000, # iteration만 낮춘 버,
+    iterations = 20000, # iteration만 낮춘 버,
     batch_size=2,
     coarse_iterations = 3000,
-    densify_until_iter = 10_000,
+    densify_until_iter = 20_000,
     opacity_reset_interval = 300000,
     # grid_lr_init = 0.0016,
     # grid_lr_final = 16,
@@ -86,7 +86,7 @@ OptimizationParams = dict(
     start_stat = 500,
     update_from = 1500,
     update_interval = 100,
-    update_until = 15_000,
+    update_until = 20000,
 
 # my test parameters
     min_opacity = 0.005,

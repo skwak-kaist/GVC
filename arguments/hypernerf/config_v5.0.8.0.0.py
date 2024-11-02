@@ -1,4 +1,4 @@
-# 기준 3번 config: v3.1.0.1.0.
+# dycheck 기준 v5.0.8.0.0.t1-2임
 
 ModelHiddenParams = dict(
     kplanes_config = {
@@ -46,7 +46,7 @@ ModelParams = dict(
     n_offsets = 10, 
     use_feat_bank = False, 
     #voxel_size = 0.0005,
-    voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001
+    voxel_size = 0.01, # voxel size를 늘림 0.001 --> 0.01
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
     
     scale_activation = 1,
@@ -56,7 +56,7 @@ ModelParams = dict(
 	dynamics = 1, 
 	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
 	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
-	dynamics_type = "mask_mul", # mask or mul or mask_mul or mul_mask
+	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
     num_of_segments = 8, 
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 14000, # iteration만 낮춘 버,
+    iterations = 20000, # 20000으로 낮
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -86,7 +86,7 @@ OptimizationParams = dict(
     start_stat = 500,
     update_from = 1500,
     update_interval = 100,
-    update_until = 15_000,
+    update_until = 15_000, # 이건 15000까지
 
 # my test parameters
     min_opacity = 0.005,
@@ -94,7 +94,7 @@ OptimizationParams = dict(
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	
-	dynamics_loss = "mean_mean",
+	dynamics_loss = "none",
 
 	# temporal adjustment
     temporal_adjustment_until = 10000,

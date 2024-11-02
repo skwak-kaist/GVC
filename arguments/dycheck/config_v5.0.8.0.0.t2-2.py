@@ -56,7 +56,7 @@ ModelParams = dict(
 	dynamics = 1, 
 	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
 	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
-	dynamics_type = "mask_mul", # mask or mul or mask_mul or mul_mask
+	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
     num_of_segments = 8, 
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 14000, # iteration만 낮춘 버,
+    iterations = 20000, # iteration만 낮춘 버,
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -89,12 +89,12 @@ OptimizationParams = dict(
     update_until = 15_000,
 
 # my test parameters
-    min_opacity = 0.005,
+    min_opacity = 0.01,
     success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	
-	dynamics_loss = "mean_mean",
+	dynamics_loss = "none",
 
 	# temporal adjustment
     temporal_adjustment_until = 10000,

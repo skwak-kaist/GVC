@@ -16,14 +16,15 @@ def get_folder_list(dataset):
     elif dataset == "nvidia":
         # coffee_martini, cook_spinach, cut_roasted_beef, flame_salmon_1, flame_steak, sear_steak
         folder_list = ["Balloon1", "Balloon2", "Jumping", "Playground", "Skating", "Truck", "Umbrella"]
-    elif dataset == "hyperfnerf":
+    elif dataset == "hypernerf":
         # interp_aleks-teapot chickchicken cut-lemon1 hand1 slice-banana torchocolate
         # misc_americano cross-hands1 espresso keyboard oven-mitts split-cookie tamping
         # vrig_3dprinter broom chicken peel-banana
-        folder_list = ["interp_aleks-teapot", "interp_chickchicken", "interp_cut-lemon1", "interp_hand1", "interp_slice-banana", "interp_torchocolate", 
-                       "misc_americano", "misc_cross-hands1", "misc_espresso", "misc_keyboard", "misc_oven-mitts", "misc_split-cookie", "misc_tamping", 
-                       "vrig_3dprinter", "vrig_broom", "vrig_chicken", "vrig_peel-banana"]
-       
+        #folder_list = ["interp_aleks-teapot", "interp_chickchicken", "interp_cut-lemon1", "interp_hand1", "interp_slice-banana", "interp_torchocolate", 
+        #               "misc_americano", "misc_cross-hands1", "misc_espresso", "misc_keyboard", "misc_oven-mitts", "misc_split-cookie", "misc_tamping", 
+        #               "vrig_3dprinter", "vrig_broom", "vrig_chicken", "vrig_peel-banana"]
+        
+        folder_list = ["aleks-teapot", "chickchicken", "cut-lemon1", "hand1", "slice-banana", "torchocolate"]
     return folder_list
 
 

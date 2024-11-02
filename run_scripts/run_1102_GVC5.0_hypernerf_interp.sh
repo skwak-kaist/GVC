@@ -22,7 +22,7 @@ scene_set=$1
 
 	elif [ $scene_set == 1 ]
 	then 
-		data_subset="misc"
+		data_subset="interp"
 		scenes="cut-lemon1 hand1"
 		scnen_paths="interp/interp_cut-lemon/cut-lemon1 \
 		interp/interp_hand/hand1-dense-v2"
@@ -32,7 +32,7 @@ scene_set=$1
 		port=6021
 	elif [ $scene_set == 2 ]
 	then 
-		data_subset="vrig"
+		data_subset="interp"
 		scenes="slice-banana torchocolate"
 		scnen_paths="interp/interp_slice-banana/slice-banana \
 		interp/interp_torchocolate/torchocolate"
@@ -43,27 +43,14 @@ scene_set=$1
 
 	elif [ $scene_set == "all" ]
 	then 
-		data_subset="all"
-		scenes="aleks-teapot chickchicken cut-lemon1 hand1 slice-banana torchocolate \
-		americano cross-hands1 espresso keyboard oven-mitts split-cookie tamping \
-		3dprinter broom chicken peel-banana"
+		data_subset="interp"
+		scenes="aleks-teapot chickchicken cut-lemon1 hand1 slice-banana torchocolate"
 		scnen_paths="interp/interp_aleks-teapot/aleks-teapot \
 		interp/interp_chickchicken/chickchicken \
 		interp/interp_cut-lemon/cut-lemon1 \
 		interp/interp_hand/hand1-dense-v2 \
 		interp/interp_slice-banana/slice-banana \
-		interp/interp_torchocolate/torchocolate \
-		misc/misc_americano/americano \
-		misc/misc_cross-hands/cross-hands1 \
-		misc/misc_espresso/espresso \
-		misc/misc_keyboard/keyboard \
-		misc/misc_oven-mitts/oven-mitts \
-		misc/misc_split-cookie/split-cookie \
-		misc/misc_tamping/tamping \
-		vrig/vrig_3dprinter/vrig-3dprinter \
-		vrig/vrig_broom/broom2 \
-		vrig/vrig_chicken/vrig-chicken \
-		vrig/vrig_peel-banana/vrig-peel-banana"
+		interp/interp_torchocolate/torchocolate"
 		
 		GPU_id=1
 		port=6020

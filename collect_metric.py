@@ -24,7 +24,9 @@ def get_folder_list(dataset):
         #               "misc_americano", "misc_cross-hands1", "misc_espresso", "misc_keyboard", "misc_oven-mitts", "misc_split-cookie", "misc_tamping", 
         #               "vrig_3dprinter", "vrig_broom", "vrig_chicken", "vrig_peel-banana"]
         
-        folder_list = ["aleks-teapot", "chickchicken", "cut-lemon1", "hand1", "slice-banana", "torchocolate"]
+        folder_list = ["aleks-teapot", "chickchicken", "cut-lemon1", "hand1", "slice-banana", "torchocolate", 
+                       "americano", "cross-hands1", "espresso", "keyboard", "oven-mitts", "split-cookie", "tamping", 
+                       "3dprinter", "broom", "chicken", "peel-banana"]
     return folder_list
 
 

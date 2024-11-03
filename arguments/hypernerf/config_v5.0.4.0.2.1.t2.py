@@ -59,7 +59,7 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 8, 
+    num_of_segments = 4, 
     local_deform_method = "explicit",
  
  	# temporal adjustment
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 20000, # 20000으로 낮
+    iterations = 30000, # 20000으로 낮
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -86,7 +86,7 @@ OptimizationParams = dict(
     start_stat = 500,
     update_from = 1500,
     update_interval = 100,
-    update_until = 5000, # 이건 15000까지
+    update_until = 7000, # 이건 15000까지
 
 # my test parameters
     min_opacity = 0.005,

@@ -103,6 +103,7 @@ for scene in $scenes; do
 
 	echo "########################################"
 	echo "scene: "$scene
+	echo "scene path: "$scene_path
 	echo "config: "$config
 	echo "GPU" $GPU_id
 	echo "########################################"
@@ -110,7 +111,7 @@ for scene in $scenes; do
 	#bash colmap.sh data/${dataset}/${scene_path} ${dataset}
 
 	#Third, downsample the point clouds generated in the second step.
-	#echo "Downsampling the point cloud"
+	echo "Downsampling the point cloud"
 	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python scripts/downsample_point.py data/${dataset}/${scene_path}/colmap/dense/workspace/fused.ply data/${dataset}/${scene_path}/points3D_downsample2.ply
 	
 	# 만약 $train이 1이 아니면 skip
@@ -133,6 +134,9 @@ for scene in $scenes; do
 	# evaluation
 	echo "Evaluating the model"
 	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}"
+
+	# idx +1
+	idx=$((idx+1))
 
 done
 

@@ -156,6 +156,9 @@ for scene in $scenes; do
 	echo "Evaluating the model"
 	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}"
 
+	# idx +1
+	idx=$((idx+1))
+
 done
 
 python collect_metric.py --output_path "output/${output_path}" --dataset nvidia

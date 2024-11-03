@@ -50,6 +50,55 @@ scene_set=$1
 		GPU_id=1
 		port=6022
 
+	elif [ $scene_set == "d0" ]
+	then 
+		data_subset="interp"
+		scenes="aleks-teapot chickchicken cut-lemon1 hand1"
+		scnen_paths="interp/interp_aleks-teapot/aleks-teapot \
+		interp/interp_chickchicken/chickchicken \
+		interp/interp_cut-lemon/cut-lemon1 \
+		interp/interp_hand/hand1-dense-v2"
+		
+		GPU_id=0
+		port=6020
+
+	elif [ $scene_set == "d1" ]
+	then 
+		data_subset="misc"
+		scenes="americano cross-hands1 espresso keyboard oven-mitts"
+		scnen_paths="misc/misc_americano/americano \
+		misc/misc_cross-hands/cross-hands1 \
+		misc/misc_espresso/espresso \
+		misc/misc_keyboard/keyboard \
+		misc/misc_oven-mitts/oven-mitts"
+
+		GPU_id=1
+		port=6021
+
+	elif [ $scene_set == "d2" ]
+	then 
+		data_subset="vrig"
+		scenes="3dprinter broom chicken peel-banana"
+		scnen_paths="vrig/vrig_3dprinter/vrig-3dprinter \
+		vrig/vrig_broom/broom2 \
+		vrig/vrig_chicken/vrig-chicken \
+		vrig/vrig_peel-banana/vrig-peel-banana"
+		
+		GPU_id=0
+		port=6022
+
+	elif [ $scene_set == "d3" ]
+	then 
+		data_subset="interp"
+		scenes="slice-banana torchocolate split-cookie tamping"
+		scnen_paths="interp/interp_slice-banana/slice-banana \
+		interp/interp_torchocolate/torchocolate \
+		misc/misc_split-cookie/split-cookie \
+		misc/misc_tamping/tamping"
+
+		GPU_id=1
+		port=6023
+
 	elif [ $scene_set == "all" ]
 	then 
 		data_subset="all"
@@ -125,6 +174,7 @@ for scene in $scenes; do
 
 	echo "########################################"
 	echo "scene: "$scene
+	echo "scene path: "$scene_path
 	echo "config: "$config
 	echo "GPU" $GPU_id
 	echo "########################################"
@@ -156,10 +206,9 @@ for scene in $scenes; do
 	echo "Evaluating the model"
 	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}"
 
+	# idx +1
+	idx=$(($idx + 1))
+
 done
 
 python collect_metric.py --output_path "output/${output_path}" --dataset nvidia
-
-
-
-

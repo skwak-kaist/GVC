@@ -50,6 +50,31 @@ scene_set=$1
 
 		GPU_id=1
 		port=6023
+	
+	elif [ $scene_set == s0 ]
+	then 
+		data_subset="interp"
+		scenes="aleks-teapot chickchicken cut-lemon1 hand1"
+		scnen_paths="interp/interp_aleks-teapot/aleks-teapot \
+		interp/interp_chickchicken/chickchicken \
+		interp/interp_cut-lemon/cut-lemon1 \
+		interp/interp_hand/hand1-dense-v2"
+		
+		GPU_id=0
+		port=6020
+	
+	elif [ $scene_set == s1 ]
+	then 
+		data_subset="interp"
+		scenes="slice-banana torchocolate americano oven-mitts"
+		scnen_paths="interp/interp_slice-banana/slice-banana \
+		interp/interp_torchocolate/torchocolate \
+		misc/misc_americano/americano \
+		misc/misc_oven-mitts/oven-mitts"
+		
+		GPU_id=1
+		port=6021
+	
 		
 	elif [ $scene_set == "all" ]
 	then 

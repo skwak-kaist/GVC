@@ -211,4 +211,8 @@ for scene in $scenes; do
 
 done
 
-python collect_metric.py --output_path "output/${output_path}" --dataset nvidia
+python collect_metric.py --output_path "output/${output_path}" --dataset hypernerf
+
+
+
+

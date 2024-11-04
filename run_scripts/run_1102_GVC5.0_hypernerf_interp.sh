@@ -38,9 +38,19 @@ scene_set=$1
 		interp/interp_torchocolate/torchocolate"
 		
 
-		GPU_id=1
+		GPU_id=0
 		port=6022
+		
+	elif [ $scene_set == 3 ]
+	then 
+		data_subset="misc"
+		scenes="americano oven-mitts"
+		scnen_paths="misc/misc_americano/americano \
+		misc/misc_oven-mitts/oven-mitts"
 
+		GPU_id=1
+		port=6023
+		
 	elif [ $scene_set == "all" ]
 	then 
 		data_subset="interp"
@@ -136,7 +146,7 @@ for scene in $scenes; do
 	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}"
 
 	# idx +1
-	idx=$((idx+1))
+	idx=$(($idx + 1))
 
 done
 

@@ -13,7 +13,7 @@ scenes="apple block spin paper-windmill space-out teddy wheel"
 
 for dir in $(ls -d ${output_path}/*dycheck*); do
     echo $dir
-    python collect_metric.py --output_path ${dir} --dataset dycheck
+    python collect_metric.py --output_path ${dir} --dataset dycheck --mask 1
 done
 
 

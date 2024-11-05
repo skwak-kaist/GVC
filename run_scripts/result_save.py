@@ -27,11 +27,16 @@ def get_output_folder_type(output_folder):
     else:
         return 'unknown'
 
-def save_result_dycheck(output_folder, save_path):
+def save_result(output_folder, save_path, dataset):
     print(f'Saving dycheck result from {output_folder} to {save_path}')
     
     # output_folder 안의 폴더 리스트
-    folder_list = ["apple", "block", "spin", "paper-windmill", "space-out", "teddy", "wheel"] 
+    if dataset == 'dycheck':
+        folder_list = ["apple", "block", "spin", "paper-windmill", "space-out", "teddy", "wheel"] 
+    elif dataset == 'hypernerf':
+        folder_list = ["aleks-teapot", "chickchicken", "cut-lemon1", "hand1", "slice-banana", "torchocolate", 
+                       "americano", "cross-hands1", "espresso", "keyboard", "oven-mitts", "split-cookie", "tamping", 
+                       "3dprinter", "broom", "chicken", "peel-banana"]
     
     for folder in folder_list:
         subfolder_path = os.path.join('../output', output_folder, folder)
@@ -42,8 +47,15 @@ def save_result_dycheck(output_folder, save_path):
         
         print(f'Processing {subfolder_path}')
         
-        # save_path/output_folder/folder 경로 생성
-        os.makedirs(os.path.join(save_path, output_folder, folder), exist_ok=True)
+        # save_path/output_folder/folder 경로가 있는지 검사
+        folder_path = os.path.join(save_path, output_folder, folder)
+        
+        # 폴더가 없으면 생성하고 있으면 넘어감
+        if not os.path.exists(folder_path):
+            os.makedirs(os.path.join(save_path, output_folder, folder), exist_ok=True)
+        else:
+            print(f'{folder_path} already exists. Skipping...')
+            continue
         
         # cfg 파일 복사
         os.system(f'cp {subfolder_path}/cfg_args {os.path.join(save_path, output_folder, folder)}')
@@ -56,7 +68,12 @@ def save_result_dycheck(output_folder, save_path):
         # point_cloud_path의 폴더 리스트를 정렬하고 가장 마지막 폴더를 가져옴
         point_cloud_folder = sorted(os.listdir(point_cloud_path))[-1]
         # point_cloud 폴더 복사
-        os.system(f'cp -r {os.path.join(point_cloud_path, point_cloud_folder)} {os.path.join(save_path, output_folder, 'point_cloud', folder)}')
+        output_path_p = os.path.join(save_path, output_folder, folder, 'point_cloud')
+        
+        #output path가 없으면 생성
+        os.makedirs(output_path_p, exist_ok=True)
+        
+        os.system(f'cp -r {os.path.join(point_cloud_path, point_cloud_folder)} {output_path_p}')
         
         # test 결과 복사
         test_path = os.path.join(subfolder_path, 'test')
@@ -65,8 +82,11 @@ def save_result_dycheck(output_folder, save_path):
             continue
         # test 경로 아래의 폴더 리스트를 정렬하고 가장 마지막 폴더를 가져옴
         test_folder = sorted(os.listdir(test_path))[-1]
+        
+        output_path_t = os.path.join(save_path, output_folder, folder, 'test')
+        os.makedirs(output_path_t, exist_ok=True)
         # test 폴더 복사
-        os.system(f'cp -r {os.path.join(test_path, test_folder)} {os.path.join(save_path, output_folder, 'test', folder)}')
+        os.system(f'cp -r {os.path.join(test_path, test_folder)} {output_path_t}')
         
         # video 결과 복사
         video_path = os.path.join(subfolder_path, 'video')
@@ -74,8 +94,11 @@ def save_result_dycheck(output_folder, save_path):
         
         # video 경로 아래의 폴더 리스트를 정렬하고 가장 마지막 폴더를 가져옴
         video_folder = sorted(os.listdir(video_path))[-1]
+        output_path_v = os.path.join(save_path, output_folder, folder, 'video')
+        os.makedirs(output_path_v, exist_ok=True)
+        
         # video 폴더 복사
-        os.system(f'cp -r {os.path.join(video_path, video_folder)} {os.path.join(save_path, output_folder, 'video', folder)}')
+        os.system(f'cp -r {os.path.join(video_path, video_folder)} {output_path_v}')
     
     
 
@@ -96,7 +119,6 @@ if __name__ == '__main__':
         output_folder_type = get_output_folder_type(output_folder)
         print(f'Output folder: {output_folder}, type: {output_folder_type}')
 
-        if output_folder_type == 'dycheck':
-            print('saving dycheck')
-            save_result_dycheck(output_folder, args.save_path)
-    
+        # save_result 함수 호출
+        save_result(output_folder, args.save_path, "dycheck")
+        save_result(output_folder, args.save_path, "hypernerf")

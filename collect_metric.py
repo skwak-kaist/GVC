@@ -273,6 +273,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--output_path', type=str, default="./output/dynerf_anchor")
     parser.add_argument('--dataset', type=str, default="dycheck")
+    parser.add_argument('--mask', type=int, default=0)
     
 
     args = parser.parse_args(sys.argv[1:])
@@ -283,8 +284,14 @@ if __name__ == "__main__":
 
     #collect_memory(folder_list, args.output_path)
 
-    #merge_psnr_and_memory(folder_list, args.output_path)
-    merge_masked_results(folder_list, args.output_path)
+	if args.mask:
+	    merge_masked_results(folder_list, args.output_path)
+	else:
+ 		merge_psnr_and_memory(folder_list, args.output_path)
+ 		
+ 		
+ 		
+
 
 
 

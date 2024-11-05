@@ -284,10 +284,10 @@ if __name__ == "__main__":
 
     #collect_memory(folder_list, args.output_path)
 
-	if args.mask:
-	    merge_masked_results(folder_list, args.output_path)
-	else:
- 		merge_psnr_and_memory(folder_list, args.output_path)
+    if args.mask:
+        merge_masked_results(folder_list, args.output_path)
+    else:
+        merge_psnr_and_memory(folder_list, args.output_path)
  		
  		
  		

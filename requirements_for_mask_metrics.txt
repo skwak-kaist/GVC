@@ -1,6 +1,6 @@
 torch2jax
 lpips
-pytorch_mssim
+pytorch_msssim
 flax==0.5.1
 gin
 six

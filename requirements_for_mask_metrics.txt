@@ -1,0 +1,14 @@
+torch2jax
+lpips
+pytorch_mssim
+flax==0.5.1
+gin
+six
+gin-config==0.1.1
+ffmpeg
+conda tensorflow
+tensorflow_graphics
+plotly
+timm
+pip install --upgrade -q gin git+https://github.com/google/trax.git@v1.2.3
+pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html

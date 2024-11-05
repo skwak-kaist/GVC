@@ -15,8 +15,8 @@ ModelHiddenParams = dict(
      'grid_dimensions': 2,
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
-     'resolution': [64, 64, 64, 150]
-     #'resolution': [64, 64, 64, 100]
+     #'resolution': [64, 64, 64, 150]
+     'resolution': [64, 64, 64, 100]
     },
 #    multires = [1,2,4],
     multires_local = [1,2],
@@ -56,10 +56,10 @@ ModelParams = dict(
 	dynamics = 1, 
 	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
 	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
-	dynamics_type = "mask_mul", # mask or mul or mask_mul or mul_mask
+	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 4, 
+    num_of_segments = 8, 
     local_deform_method = "explicit",
  
  	# temporal adjustment
@@ -89,7 +89,7 @@ OptimizationParams = dict(
     update_until = 15000, # 이건 15000까지
 
 # my test parameters
-    min_opacity = 0.005,
+    min_opacity = 0.01,
     success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 

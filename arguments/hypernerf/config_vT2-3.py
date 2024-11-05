@@ -59,7 +59,7 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 4, 
+    num_of_segments = 8, 
     local_deform_method = "explicit",
  
  	# temporal adjustment
@@ -90,7 +90,7 @@ OptimizationParams = dict(
 
 # my test parameters
     min_opacity = 0.01,
-    success_threshold = 0.6,
+    success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	

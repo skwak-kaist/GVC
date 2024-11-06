@@ -89,6 +89,7 @@ def save_result(output_folder, save_path, dataset):
         os.system(f'cp -r {os.path.join(test_path, test_folder)} {output_path_t}')
         
         # video 결과 복사
+        '''
         video_path = os.path.join(subfolder_path, 'video')
         # video 경로가 조재하지 않으면 다음 폴더로 넘어감
         
@@ -99,7 +100,7 @@ def save_result(output_folder, save_path, dataset):
         
         # video 폴더 복사
         os.system(f'cp -r {os.path.join(video_path, video_folder)} {output_path_v}')
-    
+    	'''
     
 
 

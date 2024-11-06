@@ -9,13 +9,14 @@ cd ..
 
 output_path="output"
 scenes="apple block spin paper-windmill space-out teddy wheel"
+folder_list="1030_dycheck_GVC_v5.0.8.0.0.t1-2 1030_dycheck_GVC_v5.0.8.0.0.t1 1030_dycheck_GVC_v5.0.8.0.0.t2 1030_dycheck_GVC_v5.0.8.0.0.t2-2 1030_dycheck_GVC_v5.0.8.0.0.t3 1030_dycheck_GVC_v5.0.8.0.0.t3-2 1030_dycheck_GVC_v5.0.8.0.0.t4 1030_dycheck_GVC_v5.0.8.0.0.t4-2"
 
-
-for dir in $(ls -d ${output_path}/*dycheck*); do
+#for dir in $(ls -d ${output_path}/*dycheck*); do
+for dir in $folder_list; do
     echo $dir
     for scene in $scenes; do
         echo $scene
-        python metrics_masked.py --model_path ${dir}/${scene} --data_path data/dycheck/${scene}
+        CUDA_VISIBLE_DEVICES=1 python metrics_masked.py --model_path output/${dir}/${scene} --data_path data/dycheck/${scene}
     done
     
 done

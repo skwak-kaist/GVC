@@ -46,7 +46,7 @@ def readImages(renders_dir, gt_dir, mask_dir):
         
     return renders, gts, masks, image_names
 
-def evaluate(model_paths, data_paths):
+def evaluate(model_paths, data_paths, lpips_only):
 
     full_dict = {}
     per_view_dict = {}
@@ -54,6 +54,8 @@ def evaluate(model_paths, data_paths):
     per_view_dict_polytopeonly = {}
     print("")
 
+    #lpips_only = True
+    
     compute_lpips = metrics.get_compute_lpips() 
 
     for scene_dir in model_paths:
@@ -101,10 +103,13 @@ def evaluate(model_paths, data_paths):
                     mask = t2j(torch.squeeze(masks[idx], 0).transpose(0,2))
                     
                     # calculate metrics
-                    mssim = metrics.compute_ssim(render, gt, mask) 
-                    mpsnr = metrics.compute_psnr(render, gt, mask)
-                    mlpips = compute_lpips(render, gt, mask)
-                    
+                    if lpips_only:
+                        mlpips = compute_lpips(render, gt, mask)
+                    else:
+                        mssim = metrics.compute_ssim(render, gt, mask) 
+                        mpsnr = metrics.compute_psnr(render, gt, mask)
+                        mlpips = compute_lpips(render, gt, mask)
+                        
                     # skip old metrics
                     '''
                     ssims.append(ssim(renders[idx], gts[idx]))
@@ -114,9 +119,12 @@ def evaluate(model_paths, data_paths):
                     lpipsa.append(lpips(renders[idx], gts[idx], net_type='alex'))
                     Dssims.append((1-ms_ssims[-1])/2)
                     '''
-                    mssims.append(mssim)
-                    mpsnrs.append(mpsnr)
-                    mlpipss.append(mlpips)
+                    if lpips_only:
+                        mlpipss.append(mlpips)    
+                    else:
+                        mssims.append(mssim)
+                        mpsnrs.append(mpsnr)
+                        mlpipss.append(mlpips)
                     
                 '''
                 print("Scene: ", scene_dir,  "SSIM : {:>12.7f}".format(torch.tensor(ssims).mean(), ".5"))
@@ -144,25 +152,44 @@ def evaluate(model_paths, data_paths):
                                                             }
                                                         )
                 '''
-                print("Scene: ", scene_dir,  "mSSIM : {:>12.7f}".format(torch.tensor(np.array(mssims)).mean(), ".5"))
-                print("Scene: ", scene_dir,  "mPSNR : {:>12.7f}".format(torch.tensor(np.array(mpsnrs)).mean(), ".5"))
-                print("Scene: ", scene_dir,  "mLPIPS-vgg: {:>12.7f}".format(torch.tensor(np.array(mlpipss)).mean(), ".5"))
                 
-                full_dict[scene_dir][method].update({"mSSIM": torch.tensor(np.array(mssims)).mean().item(),
-                                                        "mPSNR": torch.tensor(np.array(mpsnrs)).mean().item(),
-                                                        "mLPIPS": torch.tensor(np.array(mlpipss)).mean().item(),},
+                if lpips_only:
+                    print("Scene: ", scene_dir,  "mLPIPS: {:>12.7f}".format(torch.tensor(np.array(mlpipss)).mean(), ".5"))
+                    
+                    full_dict[scene_dir][method].update({"mLPIPS": torch.tensor(np.array(mlpipss)).mean().item(),},
 
-                                                    )
-                per_view_dict[scene_dir][method].update({"mSSIM": {name: mssim for mssim, name in zip(torch.tensor(np.array(mssims)).tolist(), image_names)},
-                                                            "mPSNR": {name: mpsnr for mpsnr, name in zip(torch.tensor(np.array(mpsnrs)).tolist(), image_names)},
-                                                            "mLPIPS": {name: mlp for mlp, name in zip(torch.tensor(np.array(mlpipss)).tolist(), image_names)},}
                                                         )
+                    per_view_dict[scene_dir][method].update({"mLPIPS": {name: mlp for mlp, name in zip(torch.tensor(np.array(mlpipss)).tolist(), image_names)},}
+                                                            )
                 
                 
-            with open(scene_dir + "/results_masked.json", 'w') as fp:
-                json.dump(full_dict[scene_dir], fp, indent=True)
-            with open(scene_dir + "/per_view_masked.json", 'w') as fp:
-                json.dump(per_view_dict[scene_dir], fp, indent=True)
+                else:
+                                    
+                    print("Scene: ", scene_dir,  "mSSIM : {:>12.7f}".format(torch.tensor(np.array(mssims)).mean(), ".5"))
+                    print("Scene: ", scene_dir,  "mPSNR : {:>12.7f}".format(torch.tensor(np.array(mpsnrs)).mean(), ".5"))
+                    print("Scene: ", scene_dir,  "mLPIPS-vgg: {:>12.7f}".format(torch.tensor(np.array(mlpipss)).mean(), ".5"))
+                    
+                    full_dict[scene_dir][method].update({"mSSIM": torch.tensor(np.array(mssims)).mean().item(),
+                                                            "mPSNR": torch.tensor(np.array(mpsnrs)).mean().item(),
+                                                            "mLPIPS": torch.tensor(np.array(mlpipss)).mean().item(),},
+
+                                                        )
+                    per_view_dict[scene_dir][method].update({"mSSIM": {name: mssim for mssim, name in zip(torch.tensor(np.array(mssims)).tolist(), image_names)},
+                                                                "mPSNR": {name: mpsnr for mpsnr, name in zip(torch.tensor(np.array(mpsnrs)).tolist(), image_names)},
+                                                                "mLPIPS": {name: mlp for mlp, name in zip(torch.tensor(np.array(mlpipss)).tolist(), image_names)},}
+                                                            )
+            if lpips_only:
+                with open(scene_dir + "/results_masked_lpips.json", 'w') as fp:
+                    json.dump(full_dict[scene_dir], fp, indent=True)
+                with open(scene_dir + "/per_view_masked_lpips.json", 'w') as fp:
+                    json.dump(per_view_dict[scene_dir], fp, indent=True)                
+                
+            else: 
+                with open(scene_dir + "/results_masked.json", 'w') as fp:
+                    json.dump(full_dict[scene_dir], fp, indent=True)
+                with open(scene_dir + "/per_view_masked.json", 'w') as fp:
+                    json.dump(per_view_dict[scene_dir], fp, indent=True)
+                    
         except Exception as e:
             
             print("Unable to compute metrics for model", scene_dir)
@@ -176,5 +203,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Training script parameters")
     parser.add_argument('--model_paths', '-m', required=True, nargs="+", type=str, default=[])
     parser.add_argument('--data_paths' ,'-d', required=True, nargs="+", type=str, default=[])
+    parser.add_argument('--lpips_only', type=int, default=0)
     args = parser.parse_args()
-    evaluate(args.model_paths, args.data_paths)
+    evaluate(args.model_paths, args.data_paths, args.lpips_only)
+    

@@ -15,7 +15,7 @@ def get_folder_list(dataset):
         folder_list = ["coffee_martini", "cook_spinach", "cut_roasted_beef", "flame_salmon_1", "flame_steak", "sear_steak"]
     elif dataset == "nvidia":
         # coffee_martini, cook_spinach, cut_roasted_beef, flame_salmon_1, flame_steak, sear_steak
-        folder_list = ["Balloon1", "Balloon2", "Jumping", "Playground", "Skating", "Truck", "Umbrella"]
+        folder_list = ["Balloon1", "Balloon2", "Jumping", "dynamicFace","Playground", "Skating", "Truck", "Umbrella"]
     elif dataset == "hypernerf":
         # interp_aleks-teapot chickchicken cut-lemon1 hand1 slice-banana torchocolate
         # misc_americano cross-hands1 espresso keyboard oven-mitts split-cookie tamping
@@ -265,6 +265,44 @@ def merge_masked_results(folder_list, output_path):
         
         with open(os.path.join(output_path, output_folder_name+ "_mPSNR_mSSIM_mLPIPS_and_Memory.txt"), 'a') as f:
             f.write(f"{folder} : {results[result_key]['mPSNR']} {results[result_key]['mSSIM']} {results[result_key]['mLPIPS']} {total_size} MB\n")    
+
+
+def merge_masked_lpips_vgg(folder_list, output_path):
+    
+    lpips_results= {}
+    
+    output_folder_name = output_path.split("/")[-1]
+    
+    # 결과 파일 생성
+    with open(os.path.join(output_path, output_folder_name+ "_mLPIPS-vgg.txt"), 'w') as f:
+        f.write("")
+    
+    for folder in folder_list:
+        json_path = os.path.join(output_path, folder, "results_masked_lpips.json")
+        model_path = os.path.join(output_path, folder, "point_cloud")
+
+        # 해당 폴더가 없는 경우 pass
+        if not os.path.exists(json_path):
+            with open(os.path.join(output_path, output_folder_name+ "_mLPIPS-vgg.txt"), 'a') as f:
+                f.write(f"{folder} : \n")
+            continue
+        
+        # read the json
+        with open(json_path) as f:
+            results = json.load(f)
+
+        # results의 최 상단 key값이 무엇인지 확인
+        result_key = list(results.keys())[0]      
+
+        lpips_results[folder] = results[result_key]['mLPIPS']
+       
+        print(f"{folder} : {results[result_key]['mLPIPS']}")
+
+        # txt 파일로 저장 (계속 이어 쓰기)
+        with open(os.path.join(output_path, output_folder_name+ "_mLPIPS-vgg.txt"), 'a') as f:
+            f.write(f"{folder} : {results[result_key]['mLPIPS']}\n")
+        
+   
         
         
 if __name__ == "__main__":
@@ -274,6 +312,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_path', type=str, default="./output/dynerf_anchor")
     parser.add_argument('--dataset', type=str, default="dycheck")
     parser.add_argument('--mask', type=int, default=0)
+    parser.add_argument('--lpips_only', type=int, default=0)
     
 
     args = parser.parse_args(sys.argv[1:])
@@ -285,12 +324,15 @@ if __name__ == "__main__":
     #collect_memory(folder_list, args.output_path)
 
     if args.mask:
-        merge_masked_results(folder_list, args.output_path)
+        if args.lpips_only:
+            merge_masked_lpips_vgg(folder_list, args.output_path)
+        else:        
+            merge_masked_results(folder_list, args.output_path)
     else:
         merge_psnr_and_memory(folder_list, args.output_path)
  		
  		
- 		
+    
 
 
 

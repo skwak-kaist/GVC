@@ -46,13 +46,13 @@ ModelParams = dict(
     n_offsets = 10, 
     use_feat_bank = False, 
     #voxel_size = 0.0005,
-    voxel_size = 0.001, # voxel size를 줄여봄. 기본값은 0.001
+    voxel_size = 0.01, # voxel size를 줄여봄. 기본값은 0.001
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
     
     scale_activation = 1,
 	opacity_activation = 0,
     
-    testmode = 4,
+    testmode = 5,
 	dynamics = 1, 
 	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
 	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
@@ -62,11 +62,16 @@ ModelParams = dict(
     num_of_segments = 8, 
     local_deform_method = "explicit",
  
+ 	# temporal adjustment
+    temporal_adjustment = 1,
+    temporal_adjustment_step_size = 0.1,
+    temporal_adjustment_threshold = 1.0,
+ 
 )
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 60_000,
+    iterations = 20000, # iteration만 낮춘 버,
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -90,6 +95,11 @@ OptimizationParams = dict(
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	
 	dynamics_loss = "none",
+
+	# temporal adjustment
+    temporal_adjustment_until = 10000,
+    temporal_adjustment_from = 5000,
+    temporal_adjustment_interval = 1000,
 
 
 )

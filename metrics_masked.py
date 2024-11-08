@@ -56,7 +56,7 @@ def evaluate(model_paths, data_paths, lpips_only):
 
     #lpips_only = True
     
-    compute_lpips = metrics.get_compute_lpips() 
+    compute_lpips = metrics.get_compute_lpips("alex") 
 
     for scene_dir in model_paths:
         try:

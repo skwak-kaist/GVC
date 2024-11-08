@@ -134,6 +134,18 @@ def collect_memory(folder_list, output_path):
         total_size = sum(os.path.getsize(os.path.join(total_path, f)) for f in os.listdir(total_path)) / (1000*1000)
         # print(f"{folder} : {total_size} MB")
         
+        # output_path/folder에 deform이라는 폴더가 있는지 검사
+        # deform 폴더가 있는 경우 해당 폴더의 용량을 더함
+        deform_path = os.path.join(output_path, folder, "deform")
+        if os.path.exists(deform_path):
+            deform_folder_list = os.listdir(deform_path)
+            deform_folder_list.sort()
+            deform_folder = deform_folder_list[-1]
+            deform_total_path = os.path.join(deform_path, deform_folder)
+            deform_total_size = sum(os.path.getsize(os.path.join(deform_total_path, f)) for f in os.listdir(deform_total_path)) / (1000*1000)
+            total_size += deform_total_size
+        
+        
         total_memory[folder] = total_size
     
     output_folder_name = output_path.split("/")[-1]
@@ -189,6 +201,18 @@ def merge_psnr_and_memory(folder_list, output_path):
         # 해당 폴더가 포함하는 파일의 용량 총 합을 MB 단위로 출력
         total_size = sum(os.path.getsize(os.path.join(total_path, f)) for f in os.listdir(total_path)) / (1000*1000)
         # print(f"{folder} : {total_size} MB")
+        
+        # output_path/folder에 deform이라는 폴더가 있는지 검사
+        # deform 폴더가 있는 경우 해당 폴더의 용량을 더함
+        deform_path = os.path.join(output_path, folder, "deform")
+        if os.path.exists(deform_path):
+            deform_folder_list = os.listdir(deform_path)
+            deform_folder_list.sort()
+            deform_folder = deform_folder_list[-1]
+            deform_total_path = os.path.join(deform_path, deform_folder)
+            deform_total_size = sum(os.path.getsize(os.path.join(deform_total_path, f)) for f in os.listdir(deform_total_path)) / (1000*1000)
+            total_size += deform_total_size
+        
         
         total_memory[folder] = total_size
         
@@ -313,23 +337,24 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', type=str, default="dycheck")
     parser.add_argument('--mask', type=int, default=0)
     parser.add_argument('--lpips_only', type=int, default=0)
+    parser.add_argument('--all', type=int, default=0)
     
 
     args = parser.parse_args(sys.argv[1:])
 
     folder_list = get_folder_list(args.dataset)
 
-    #collect_metric(folder_list, args.output_path)
+    collect_metric(folder_list, args.output_path)
 
     #collect_memory(folder_list, args.output_path)
 
     if args.mask:
-        if args.lpips_only:
-            merge_masked_lpips_vgg(folder_list, args.output_path)
-        else:        
-            merge_masked_results(folder_list, args.output_path)
+	    if args.lpips_only:
+	        merge_masked_lpips_vgg(folder_list, args.output_path)
+	    else:        
+	        merge_masked_results(folder_list, args.output_path)
     else:
-        merge_psnr_and_memory(folder_list, args.output_path)
+	    merge_psnr_and_memory(folder_list, args.output_path)
  		
  		
     

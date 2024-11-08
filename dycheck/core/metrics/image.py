@@ -147,7 +147,7 @@ def compute_ssim(
     return ssim
 
 
-def get_compute_lpips() -> Callable[
+def get_compute_lpips(model_name) -> Callable[
     [np.ndarray, np.ndarray, Optional[np.ndarray]], np.ndarray
 ]:
     """Get the LPIPS metric function.
@@ -162,7 +162,7 @@ def get_compute_lpips() -> Callable[
     import lpips
     import torch
 
-    model = lpips.LPIPS(net="vgg", spatial=True)
+    model = lpips.LPIPS(net=model_name, spatial=True)
 
     @torch.inference_mode()
     def compute_lpips(

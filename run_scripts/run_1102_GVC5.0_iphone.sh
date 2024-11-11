@@ -88,6 +88,9 @@ output_path=${date}_${dataset}_${test_version}
 
 cd ..
 
+# training time 측정을 위한 txt 파일 생성
+echo "training time" > "output/${output_path}/training_time.txt"
+
 for scene in $scenes; do
 
 	echo "########################################"
@@ -100,13 +103,23 @@ for scene in $scenes; do
 	#Third, downsample the point clouds generated in the second step.
 	#echo "Downsampling the point cloud"
 	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python scripts/downsample_point.py data/${dataset}/${scene}/colmap/dense/workspace/fused.ply data/${dataset}/${scene}/points3D_downsample2.ply
-	
+
 	# 만약 $train이 1이 아니면 skip
 	if [ $train == 1 ]
 	then
 		# Finally, train.
+		# 현재 시간 기록
+		start_time=$(date '+%s')
+
 		echo "Training the model"
 		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py
+
+		# 학습시간 기록
+		end_time=$(date '+%s')
+		diff=$((end_time - start_time))
+		hour=$((diff / 3600 % 24))
+		echo "Training time: $(($diff / 3600)) hours, $(($diff % 3600 / 60)) minutes, $(($diff % 60)) seconds" >> "output/${output_path}/training_time.txt"
+
 	else
 		echo "Skip training"
 	fi

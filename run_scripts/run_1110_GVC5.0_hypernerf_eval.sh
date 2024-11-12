@@ -98,8 +98,6 @@ scene_set=$1
 echo "This scripts runs for scenes: $scenes"
 
 # 2nd argument: config_number
-config_number=$2
-config="config_v"$config_number
 
 # 3rd argument: port
 if [ -z "$3" ]
@@ -128,15 +126,9 @@ fi
 
 dataset=hypernerf
 test_version=GVC_v$config_number
-output_path=${date}_${dataset}_${test_version}
+output_path=${2}
 
 cd ..
-
-# training time 측정을 위한 txt 파일 생성
-echo "training time" > "output/${output_path}/training_time.txt"
-
-# training log
-echo "training log" > "output/${output_path}/training_log.txt"
 
 for scene in $scenes; do
 
@@ -159,30 +151,22 @@ for scene in $scenes; do
 	if [ $train == 1 ]
 	then
 		# Finally, train.
-		# 현재 시간 기록
-		start_time=$(date '+%s')
 		echo "Training the model"
-		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene_path} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py >> "output/${output_path}/training_log.txt"
-		# 학습시간 기록
-		end_time=$(date '+%s')
-		diff=$((end_time - start_time))
-		hour=$((diff / 3600 % 24))
-		echo "Training time: $(($diff / 3600)) hours, $(($diff % 3600 / 60)) minutes, $(($diff % 60)) seconds" >> "output/${output_path}/training_time.txt"
-		
+		#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene_path} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py
 	else
 		echo "Skip training"
 	fi
 
 	# rendering
 	echo "Rendering the model"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --configs arguments/${dataset}/${config}.py >> "output/${output_path}/training_log.txt"
+	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --configs arguments/${dataset}/${config}.py
 
 	# rendering canonical frame
 	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --skip_test --skip_video --configs arguments/${dataset}/${config}.py --canonical_frame_render
 	
 	# evaluation
 	echo "Evaluating the model"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}" >> "output/${output_path}/training_log.txt"
+	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}"
 
 	# idx +1
 	idx=$(($idx + 1))

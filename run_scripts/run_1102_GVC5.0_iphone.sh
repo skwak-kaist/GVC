@@ -91,6 +91,8 @@ cd ..
 # training time 측정을 위한 txt 파일 생성
 echo "training time" > "output/${output_path}/training_time.txt"
 
+echo "training log" > "output/${output_path}/training_log.txt"
+
 for scene in $scenes; do
 
 	echo "########################################"
@@ -112,7 +114,7 @@ for scene in $scenes; do
 		start_time=$(date '+%s')
 
 		echo "Training the model"
-		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py
+		PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python train.py -s data/${dataset}/${scene} --port ${port} --expname "${output_path}/${scene}" --configs arguments/${dataset}/${config}.py >> "output/${output_path}/training_log.txt"
 
 		# 학습시간 기록
 		end_time=$(date '+%s')
@@ -126,14 +128,14 @@ for scene in $scenes; do
 
 	# rendering
 	echo "Rendering the model"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --configs arguments/${dataset}/${config}.py
+	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --configs arguments/${dataset}/${config}.py >> "output/${output_path}/training_log.txt"
 
 	# rendering canonical frame
 	#PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python render.py --model_path "output/${output_path}/${scene}" --skip_train --skip_test --skip_video --configs arguments/${dataset}/${config}.py --canonical_frame_render
 	
 	# evaluation
 	echo "Evaluating the model"
-	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}"
+	PYTHONPATH='.' CUDA_VISIBLE_DEVICES=$GPU_id python metrics.py --model_path "output/${output_path}/${scene}" >> "output/${output_path}/training_log.txt"
 
 done
 

@@ -132,6 +132,8 @@ output_path=${date}_${dataset}_${test_version}
 
 cd ..
 
+mkdir output/${output_path}
+
 # training time 측정을 위한 txt 파일 생성
 echo "training time" > "output/${output_path}/training_time.txt"
 

@@ -83,29 +83,90 @@ def collect_metric(folder_list, output_path):
             f.write(f"{key} : {value}\n")
 
     # psnr
-    with open(os.path.join(output_path, output_folder_name+ "_ psnr_results.txt"), 'w') as f:
+    with open(os.path.join(output_path, output_folder_name+ "_psnr_results.txt"), 'w') as f:
         for key, value in psnr_results.items():
             f.write(f"{key} : {value}\n")
             
     # ssim
-    with open(os.path.join(output_path, output_folder_name+ "_ ssim_results.txt"), 'w') as f:
+    with open(os.path.join(output_path, output_folder_name+ "_ssim_results.txt"), 'w') as f:
         for key, value in ssim_results.items():
             f.write(f"{key} : {value}\n")
             
     # msssim
-    with open(os.path.join(output_path, output_folder_name+ "_ msssim_results.txt"), 'w') as f:
+    with open(os.path.join(output_path, output_folder_name+ "_msssim_results.txt"), 'w') as f:
         for key, value in msssim_results.items():
             f.write(f"{key} : {value}\n")
             
     # lpips_vgg
-    with open(os.path.join(output_path, output_folder_name+ "_ lpips_vgg_results.txt"), 'w') as f:
+    with open(os.path.join(output_path, output_folder_name+ "_lpips_vgg_results.txt"), 'w') as f:
         for key, value in lpips_vgg_results.items():
             f.write(f"{key} : {value}\n")
             
     # lpips_alex
-    with open(os.path.join(output_path, output_folder_name+ "_ lpips_alex_results.txt"), 'w') as f:
+    with open(os.path.join(output_path, output_folder_name+ "_lpips_alex_results.txt"), 'w') as f:
         for key, value in lpips_alex_results.items():
             f.write(f"{key} : {value}\n")
+   
+def collect_psnr_ssim_lpips_memory(folder_list, output_path):
+    
+    psnr_results = {}
+    ssim_results = {}
+    lpips_results= {}
+    total_memory = {}
+    
+    output_folder_name = output_path.split("/")[-1]
+    
+    # 결과 파일 생성
+    with open(os.path.join(output_path, output_folder_name+ "_psnr_ssim_lpips_memory.txt"), 'w') as f:
+        f.write("")
+    
+    for folder in folder_list:
+        json_path = os.path.join(output_path, folder, "results.json")
+        model_path = os.path.join(output_path, folder, "point_cloud")
+
+        # 해당 폴더가 없는 경우 pass
+        if not os.path.exists(json_path):
+            with open(os.path.join(output_path, output_folder_name+ "_psnr_ssim_lpips_memory.txt"), 'a') as f:
+                f.write(f"{folder} : \n")
+            continue
+            
+        # read the json
+        with open(json_path) as f:
+            results = json.load(f)
+
+        # results의 최 상단 key값이 무엇인지 확인
+        result_key = list(results.keys())[0]      
+        
+        psnr_results[folder] = results[result_key]['PSNR']
+        ssim_results[folder] = results[result_key]['SSIM']
+        lpips_results[folder] = results[result_key]['LPIPS-vgg']
+
+        #model path에 있는 폴더 리스트
+        model_folder_list = os.listdir(model_path)
+        
+        # 이름순으로 정렬
+        model_folder_list.sort()
+        
+        # 가장 마지막 폴더
+        model_folder = model_folder_list[-1]
+        
+        # 총 경로
+        total_path = os.path.join(model_path, model_folder)
+        
+        # 해당 폴더가 포함하는 파일의 용량 총 합을 MB 단위로 출력
+        total_size = sum(os.path.getsize(os.path.join(total_path, f)) for f in os.listdir(total_path)) / (1000*1000)
+        # print(f"{folder} : {total_size} MB")
+        
+        total_memory[folder] = total_size
+        
+        print(f"{folder} : {results[result_key]['PSNR']} {results[result_key]['SSIM']} {results[result_key]['LPIPS-vgg']} {total_size} MB")
+
+        # txt 파일로 저장
+        with open(os.path.join(output_path, output_folder_name+ "_psnr_ssim_lpips_memory.txt"), 'a') as f:
+            f.write(f"{folder} : {results[result_key]['PSNR']} {results[result_key]['SSIM']} {results[result_key]['LPIPS-vgg']} {total_size} MB\n")
+            
+    
+            
 
 def collect_memory(folder_list, output_path):
     
@@ -344,10 +405,13 @@ if __name__ == "__main__":
 
     folder_list = get_folder_list(args.dataset)
 
-    collect_metric(folder_list, args.output_path)
+    #collect_metric(folder_list, args.output_path)
 
     #collect_memory(folder_list, args.output_path)
+    
+    collect_psnr_ssim_lpips_memory(folder_list, args.output_path)
 
+    '''
     if args.mask:
 	    if args.lpips_only:
 	        merge_masked_lpips_vgg(folder_list, args.output_path)
@@ -356,7 +420,7 @@ if __name__ == "__main__":
     else:
 	    merge_psnr_and_memory(folder_list, args.output_path)
  		
- 		
+    '''
     
 
 

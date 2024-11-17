@@ -162,7 +162,7 @@ def get_compute_lpips(model_name) -> Callable[
     import lpips
     import torch
 
-    model = lpips.LPIPS(net=model_name, spatial=True)
+    model = lpips.LPIPS(net='vgg', spatial=True)
 
     @torch.inference_mode()
     def compute_lpips(

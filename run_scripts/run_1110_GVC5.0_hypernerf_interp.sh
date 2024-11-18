@@ -23,7 +23,7 @@ scene_set=$1
 	elif [ $scene_set == 1 ]
 	then 
 		data_subset="interp"
-		scenes="cut-lemon1 hand1"
+		scenes="hand1"
 		scnen_paths="interp/interp_cut-lemon/cut-lemon1 \
 		interp/interp_hand/hand1-dense-v2"
 		

@@ -411,16 +411,17 @@ if __name__ == "__main__":
     
     collect_psnr_ssim_lpips_memory(folder_list, args.output_path)
 
-    '''
+
     if args.mask:
 	    if args.lpips_only:
 	        merge_masked_lpips_vgg(folder_list, args.output_path)
 	    else:        
 	        merge_masked_results(folder_list, args.output_path)
     else:
-	    merge_psnr_and_memory(folder_list, args.output_path)
+	    #merge_psnr_and_memory(folder_list, args.output_path)
+        collect_psnr_ssim_lpips_memory(folder_list, args.output_path)
  		
-    '''
+    
     
 
 

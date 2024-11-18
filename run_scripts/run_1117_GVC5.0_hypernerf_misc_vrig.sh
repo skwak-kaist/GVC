@@ -78,6 +78,26 @@ scene_set=$1
 		GPU_id=1
 		port=6021
 	
+	elif [ $scene_set == r0 ]
+	then 
+		data_subset="misc"
+		scenes="americano oven-mitts"
+		scnen_paths="misc/misc_americano/americano \
+		misc/misc_oven-mitts/oven-mitts"
+		
+		GPU_id=0
+		port=6020
+	
+	elif [ $scene_set == r1 ]
+	then 
+		data_subset="vrig"
+		scenes="split-cookie broom"
+		scnen_paths="misc/misc_split-cookie/split-cookie \
+		vrig/vrig_broom/broom2"
+		
+		GPU_id=1
+		port=6021
+	
 		
 	elif [ $scene_set == "all" ]
 	then 

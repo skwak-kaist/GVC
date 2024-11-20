@@ -969,7 +969,8 @@ class GaussianModel:
                 for idx, attr_name in enumerate(dynamics_names):
                     dynamics[:, idx] = np.asarray(plydata.elements[0][attr_name]).astype(np.float32)
                                    
-        
+        if self.gvc_temporal_adjustment:
+            self.load_canonical_times(os.path.join(os.path.dirname(path), "canonical_times.npy"))
                     
             #dynamics = np.asarray(plydata.elements[0]["dynamics"])[..., np.newaxis].astype(np.float32)
             #self._dynamics = nn.Parameter(torch.tensor(dynamics, dtype=torch.float, device="cuda").requires_grad_(True))

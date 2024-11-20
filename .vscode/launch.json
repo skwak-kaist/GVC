@@ -146,6 +146,20 @@
             "env": {
                 "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
             }
-        },           
+        },       
+        {
+            "name": "GVC5.0-render-hypernerf-keyboard-canonical",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/render.py",
+            "args": "--model_path output/1117_hypernerf_GVC_vT3-6/keyboard --skip_train --skip_test --skip_video --configs arguments/hypernerf/config_vT3-6.py --canonical_frame_render",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        },   
+        
     ]
 }

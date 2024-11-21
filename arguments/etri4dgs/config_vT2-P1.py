@@ -56,7 +56,7 @@ ModelParams = dict(
 	dynamics = 1, 
 	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
 	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
-	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
+	dynamics_type = "mask_mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
     num_of_segments = 8, 
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 14000, 
+    iterations = 20000, 
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -89,7 +89,7 @@ OptimizationParams = dict(
     update_until = 10000, 
 
 # my test parameters
-    min_opacity = 0.001,
+    min_opacity = 0.005,
     success_threshold = 0.7,
     densify_grad_threshold = 0.0002,
 

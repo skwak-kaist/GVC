@@ -85,6 +85,8 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
     imageio.mimwrite(os.path.join(model_path, name, "ours_{}".format(iteration), test_case_name + '_' + scene_name + '_' + name + '_' + 'video_rgb.mp4'), render_images, fps=30)
 
+
+
 def render_set_canonical(model_path, name, iteration, views, gaussians, pipeline, background, cam_type, gvc_params):
         
     ### local canonical_rendering_still ###
@@ -111,12 +113,6 @@ def render_set_canonical(model_path, name, iteration, views, gaussians, pipeline
 
         render_images.append(to8b(rendering).transpose(1,2,0))
         render_list.append(rendering)
-        if name in ["train", "test"]:
-            if cam_type != "PanopticSports":
-                gt = view.original_image[0:3, :, :]
-            else:
-                gt = view['image'].cuda()
-            gt_list.append(gt)
 
     time2=time()
     print("FPS:",(len(views)-1)/(time2-time1))
@@ -152,13 +148,7 @@ def render_set_canonical(model_path, name, iteration, views, gaussians, pipeline
 
         render_images.append(to8b(rendering).transpose(1,2,0))
         render_list.append(rendering)
-        if name in ["train", "test"]:
-            if cam_type != "PanopticSports":
-                gt = view.original_image[0:3, :, :]
-            else:
-                gt  = view['image'].cuda()
-            gt_list.append(gt)
-
+        
     time2=time()
     print("FPS:",(len(views)-1)/(time2-time1))
 
@@ -192,12 +182,6 @@ def render_set_canonical(model_path, name, iteration, views, gaussians, pipeline
 
         render_images.append(to8b(rendering).transpose(1,2,0))
         render_list.append(rendering)
-        if name in ["train", "test"]:
-            if cam_type != "PanopticSports":
-                gt = view.original_image[0:3, :, :]
-            else:
-                gt  = view['image'].cuda()
-            gt_list.append(gt)
 
     time2=time()
     print("FPS:",(len(views)-1)/(time2-time1))
@@ -231,12 +215,6 @@ def render_set_canonical(model_path, name, iteration, views, gaussians, pipeline
 
         render_images.append(to8b(rendering).transpose(1,2,0))
         render_list.append(rendering)
-        if name in ["train", "test"]:
-            if cam_type != "PanopticSports":
-                gt = view.original_image[0:3, :, :]
-            else:
-                gt = view['image'].cuda()
-            gt_list.append(gt)
 
     time2=time()
     print("FPS:",(len(views)-1)/(time2-time1))
@@ -283,7 +261,8 @@ pipeline : PipelineParams, skip_train : bool, skip_test : bool, skip_video: bool
             render_set(dataset.model_path,"video",scene.loaded_iter,scene.getVideoCameras(),gaussians,pipeline,background,cam_type, gvc_params)
 
         if canonical_frame_render:
-            render_set_canonical(dataset.model_path,"video",scene.loaded_iter,scene.getVideoCameras(),gaussians,pipeline,background,cam_type, gvc_params)
+            #render_set_canonical(dataset.model_path, "video",scene.loaded_iter, scene.getVideoCameras(),gaussians, pipeline, background, cam_type, gvc_params)
+            render_set_canonical(dataset.model_path, "test",scene.loaded_iter, scene.getTestCameras(),gaussians, pipeline, background, cam_type, gvc_params)
 
 
 if __name__ == "__main__":

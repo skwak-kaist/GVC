@@ -30,6 +30,10 @@ def get_folder_list(dataset):
         #folder_list = ["aleks-teapot", "chickchicken", "cut-lemon1", "hand1", "slice-banana", "torchocolate", 
         #               "americano", "cross-hands1", "espresso", "keyboard", "oven-mitts", "split-cookie", "tamping", 
         #               "3dprinter", "broom", "chicken", "peel-banana"]
+    elif dataset == "dnerf":
+        # bouncingballs hellwarrior hook jumpingjacks lego mutant standup trex
+        folder_list = ["bouncingballs", "hellwarrior", "hook", "jumpingjacks", "lego", "mutant", "standup", "trex"]
+
     return folder_list
 
 

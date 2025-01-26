@@ -14,7 +14,7 @@ ModelHiddenParams = dict(
     kplanes_config_local = { # gaussian attributes deformation k-planes
      'grid_dimensions': 2,
      'input_coordinate_dim': 4,
-     'output_coordinate_dim': 32,
+     'output_coordinate_dim': 16,
      'resolution': [64, 64, 64, 50]
      #'resolution': [64, 64, 64, 100]
     },
@@ -28,7 +28,7 @@ ModelHiddenParams = dict(
     l1_time_planes =  0.0001,
     render_process=True,
     weight_decay_iteration=0,
-    bounds=1.6
+    bounds=1.6,
 
 	# 모두 deform     
     anchor_deform = True,
@@ -44,12 +44,13 @@ ModelHiddenParams = dict(
 )
 
 ModelParams = dict(
-    appearance_dim = 16,
+    appearance_dim = 0,
     n_offsets = 10, 
     use_feat_bank = False, 
     #voxel_size = 0.0005,
-    voxel_size = 0.01, # voxel size를 늘림 0.001 --> 0.01
+    voxel_size = 0.001, # voxel size를 늘림 0.001 --> 0.01
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
+    update_init_factor = 4,
     
     scale_activation = 1,
 	opacity_activation = 0,
@@ -74,7 +75,7 @@ ModelParams = dict(
 OptimizationParams = dict(
     # dataloader=True,
     iterations = 20000, 
-    batch_size=4,
+    batch_size=2,
     coarse_iterations = 3000,
     deformation_lr_init = 0.00016,
     deformation_lr_final = 0.0000016,

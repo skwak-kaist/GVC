@@ -14,8 +14,8 @@ ModelHiddenParams = dict(
     kplanes_config_local = { # gaussian attributes deformation k-planes
      'grid_dimensions': 2,
      'input_coordinate_dim': 4,
-     'output_coordinate_dim': 32,
-     'resolution': [64, 64, 64, 50]
+     'output_coordinate_dim': 16,
+     'resolution': [64, 64, 64, 30]
      #'resolution': [64, 64, 64, 100]
     },
 #    multires = [1,2,4],
@@ -28,7 +28,7 @@ ModelHiddenParams = dict(
     l1_time_planes =  0.0001,
     render_process=True,
     weight_decay_iteration=0,
-    bounds=1.6
+    bounds=1.6,
 
 	# 모두 deform     
     anchor_deform = True,

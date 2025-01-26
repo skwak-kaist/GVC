@@ -28,7 +28,7 @@ ModelHiddenParams = dict(
     l1_time_planes =  0.0001,
     render_process=True,
     weight_decay_iteration=0,
-    bounds=1.6
+    bounds=1.6,
 
 	# 모두 deform     
     anchor_deform = True,

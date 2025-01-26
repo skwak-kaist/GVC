@@ -21,16 +21,16 @@ ModelHiddenParams = dict(
 #    multires = [1,2,4],
     multires_local = [1,2],
     
-    defor_depth = 1,
+    defor_depth = 0,
     net_width = 128,
     plane_tv_weight = 0.0002,
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
-    render_process=True,
+    render_process=False,
 
 	# 모두 deform     
     anchor_deform = False,
-    local_context_feature_deform = True,
+    local_context_feature_deform = False,
     grid_offsets_deform = True,
     grid_scale_deform = True,
     
@@ -59,7 +59,7 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 4, 
+    num_of_segments = 8, 
     local_deform_method = "explicit",
  
  	# temporal adjustment
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 30000, 
+    iterations = 14000, 
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -86,11 +86,11 @@ OptimizationParams = dict(
     start_stat = 500,
     update_from = 1500,
     update_interval = 100,
-    update_until = 15000, 
+    update_until = 7000, 
 
 # my test parameters
-    min_opacity = 0.01,
-    success_threshold = 0.7,
+    min_opacity = 0.005,
+    success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	

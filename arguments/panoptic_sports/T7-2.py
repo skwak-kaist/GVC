@@ -26,7 +26,7 @@ ModelHiddenParams = dict(
     plane_tv_weight = 0.0002,
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
-    render_process=True,
+    render_process=False,
 
 	# 모두 deform     
     anchor_deform = True,
@@ -35,7 +35,7 @@ ModelHiddenParams = dict(
     grid_scale_deform = True,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함    
+    deform_n_offsets = 20, # ModelParams의 n_offsets과 일치시켜야 함    
     dynamics_activation = "sigmoid", 
     
 
@@ -43,7 +43,7 @@ ModelHiddenParams = dict(
 
 ModelParams = dict(
     appearance_dim = 16,
-    n_offsets = 10, 
+    n_offsets = 20, 
     use_feat_bank = False, 
     voxel_size = 0.01,
     #voxel_size = 0.001, # voxel size를 늘림 0.001 --> 0.01
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 30000,
+    iterations = 30000, 
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,

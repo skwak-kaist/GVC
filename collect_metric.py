@@ -33,6 +33,9 @@ def get_folder_list(dataset):
     elif dataset == "dnerf":
         # bouncingballs hellwarrior hook jumpingjacks lego mutant standup trex
         folder_list = ["bouncingballs", "hellwarrior", "hook", "jumpingjacks", "lego", "mutant", "standup", "trex"]
+    elif dataset == "panoptic_sports":
+        # basketball boxes football juggle softball tennis
+        folder_list = ["basketball", "boxes", "football", "juggle", "softball", "tennis"]
 
     return folder_list
 

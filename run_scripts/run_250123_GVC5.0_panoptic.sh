@@ -100,7 +100,7 @@ scene_set=$1
 	elif [ $scene_set == "all" ]
 	then 
 		data_subset="panopticsports"
-		scenes="bouncingballs hellwarrior hook jumpingjacks lego mutant standup trex"
+		scenes="basketball boxes football juggle softball tennis"
 		
 		GPU_id=1
 		port=6020
@@ -141,7 +141,7 @@ else
 	train=$5
 fi
 
-dataset=dnerf
+dataset=panoptic_sports
 test_version=GVC_v$config_number
 output_path=${date}_${dataset}_${test_version}
 

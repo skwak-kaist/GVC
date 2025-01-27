@@ -160,6 +160,19 @@
                 "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
             }
         },   
+        {
+            "name": "GVC5.0-render-panoptic",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/skwak/Workspace/Project_NeRF/GVC/train.py",
+            "args": "-s data/panoptic_sports/basketball --port 6018 --expname panoptic_sports/basketball --configs arguments/panoptic_sports/T1-1.py",
+            "console": "integratedTerminal", 
+            "justMyCode": true, 
+            "logToFile": true,
+            "env": {
+                "PYTHONPATH": "/home/skwak/Workspace/Project_NeRF/GVC",
+            }
+        },   
         
     ]
 }

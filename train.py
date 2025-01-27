@@ -214,7 +214,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
                                     background, stage=stage,cam_type=scene.dataset_type)
             elif gvc_params["GVC_testmode"] >= 1 and gvc_params["GVC_testmode"] <= 5:        
                 # testmode 1: initial_frame: scaffold-GS, others:
-                voxel_visible_mask = prefilter_voxel(viewpoint_cam, gaussians, pipe, background)
+                voxel_visible_mask = prefilter_voxel(viewpoint_cam, gaussians, pipe, background, cam_type=scene.dataset_type)
                 #voxel_visible_mask=None
                 #print(f"voxel_visible_mask: {voxel_visible_mask.sum()}")
                 retain_grad = (iteration < opt.update_until and iteration >= 0) 
@@ -405,7 +405,10 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
             if stage == "fine" and gvc_params["GVC_testmode"] >= 5:
                 # iteration이 temporal_adjustment_until과 temporal_adjustment_from 사이에 있을때만 수행
                 #if iteration < opt.temporal_adjustment_until and iteration > opt.temporal_adjustment_from:
-                gaussians.temporal_adjustment_statistic(viewpoint_cam.time, viewspace_point_tensor, visibility_filter)
+                if scene.dataset_type == "PanopticSports":
+                    gaussians.temporal_adjustment_statistic(viewpoint_cam['time'], viewspace_point_tensor, visibility_filter)
+                else:
+                    gaussians.temporal_adjustment_statistic(viewpoint_cam.time, viewspace_point_tensor, visibility_filter)
             
                 if iteration % opt.temporal_adjustment_interval == 0:
                     gaussians.temporal_adjustment()

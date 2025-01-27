@@ -43,10 +43,10 @@ def render_canonical(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_
         # deformation을 하지 않고 neural gaussian 바로 생성
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
     
     elif canonical_times == 'local': # local canonical rendering
         # G2C deformation을 수행하고 C2L deformation을 수행하지 않고 neural gaussian 생성
@@ -60,10 +60,10 @@ def render_canonical(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_
         
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)        
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)        
                 
     elif canonical_times == 'local_still': # local canonical rendering still camera
         # G2C deformation을 수행하고 C2L deformation을 수행하지 않고 neural gaussian 생성
@@ -77,10 +77,10 @@ def render_canonical(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_
         
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)       
+                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)       
                 
         viewpoint_camera = still_camera
         
@@ -96,10 +96,10 @@ def render_canonical(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_
         # deform된 anchor와 feat를 가지고 neural gaussian을 생성
         if is_training:
             means3D, color, opacity, scales, rotations, neural_opacity, mask = \
-                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
         else:
             means3D, color, opacity, scales, rotations = \
-                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                generate_neural_gaussians_v2(still_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
         shs = None
         time = torch.tensor(time_base).to(means3D.device).repeat(means3D.shape[0],1)
@@ -501,7 +501,8 @@ def generate_neural_gaussians_v1(viewpoint_camera, pc : GaussianModel, visible_m
 
 
 
-def generate_neural_gaussians_v2(viewpoint_camera, pc : GaussianModel, visible_mask=None, anchor = None, feat = None, grid_offsets = None, grid_scaling = None, is_training=False):
+def generate_neural_gaussians_v2(viewpoint_camera, pc : GaussianModel, visible_mask=None, anchor = None, 
+                                 feat = None, grid_offsets = None, grid_scaling = None, is_training=False, cam_type=None):
     ## view frustum filtering for acceleration    
     if visible_mask is None:
         visible_mask = torch.ones(pc.get_anchor.shape[0], dtype=torch.bool, device = pc.get_anchor.device)
@@ -523,8 +524,18 @@ def generate_neural_gaussians_v2(viewpoint_camera, pc : GaussianModel, visible_m
     ## get view properties for anchor
     #print("anchor device:",anchor.device) # cuda:0
     #print("viewpoint_camera.camera_center device:",viewpoint_camera.camera_center.device) # cpu
-    viewpoint_camera.camera_center = viewpoint_camera.camera_center.cuda()
-    ob_view = anchor - viewpoint_camera.camera_center
+    
+    print("viewpoint_camera:",viewpoint_camera)
+    
+    # cam_type이 PanopticSports가 아닌 경우
+    if cam_type != "PanopticSports":
+        viewpoint_camera.camera_center = viewpoint_camera.camera_center.cuda()
+        ob_view = anchor - viewpoint_camera.camera_center
+    else:
+        
+        #viewpoint_camera['camera'].campos = viewpoint_camera['camera'].campos.cuda()
+        ob_view = anchor - viewpoint_camera['camera'].campos.cuda()
+        
     # dist
     ob_dist = ob_view.norm(dim=1, keepdim=True)
     # view
@@ -638,10 +649,10 @@ def render_test5(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     if "coarse" in stage:   
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
     
     elif "fine" in stage:
 
@@ -674,10 +685,10 @@ def render_test5(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
             # deform된 anchor와 feat를 가지고 neural gaussian을 생성
             if is_training:
                 means3D, color, opacity, scales, rotations, neural_opacity, mask = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
             else:
                 means3D, color, opacity, scales, rotations = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
             shs = None
             time = torch.tensor(time_base).to(means3D.device).repeat(means3D.shape[0],1)
@@ -693,10 +704,10 @@ def render_test5(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
              # deform된 anchor와 feat를 가지고 neural gaussian을 생성
             if is_training:
                 means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
             else:
                 means3D_final, color, opacity_final, scales_final, rotations_final = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
             #neural_opacity = opacity_final
                                                                 
@@ -796,10 +807,10 @@ def render_test4(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     if "coarse" in stage:   
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
     
     elif "fine" in stage:
 
@@ -814,10 +825,10 @@ def render_test4(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
             # deform된 anchor와 feat를 가지고 neural gaussian을 생성
             if is_training:
                 means3D, color, opacity, scales, rotations, neural_opacity, mask = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
             else:
                 means3D, color, opacity, scales, rotations = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
             shs = None
             time = torch.tensor(time_base).to(means3D.device).repeat(means3D.shape[0],1)
@@ -833,10 +844,10 @@ def render_test4(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
              # deform된 anchor와 feat를 가지고 neural gaussian을 생성
             if is_training:
                 means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
             else:
                 means3D_final, color, opacity_final, scales_final, rotations_final = \
-                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                    generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
             #neural_opacity = opacity_final
                                                                 
@@ -922,10 +933,10 @@ def render_test3(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     if "coarse" in stage:   
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
     
     elif "fine" in stage:
         # time 정보
@@ -944,10 +955,10 @@ def render_test3(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
         # deform된 anchor와 feat를 가지고 neural gaussian을 생성
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
     
     # 이후 과정은 공통임
@@ -1030,10 +1041,10 @@ def render_test2(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
     if "coarse" in stage:   
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor, feat, grid_offsets, grid_scaling, is_training=is_training, cam_type=cam_type)
     
     elif "fine" in stage:
         # time 정보
@@ -1055,10 +1066,10 @@ def render_test2(gvc_params, viewpoint_camera, pc : GaussianModel, pipe, bg_colo
         # deform된 anchor와 feat를 가지고 neural gaussian을 생성
         if is_training:
             means3D_final, color, opacity_final, scales_final, rotations_final, neural_opacity, mask = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)
         else:
             means3D_final, color, opacity_final, scales_final, rotations_final = \
-                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training)     
+                generate_neural_gaussians_v2(viewpoint_camera, pc, visible_mask, anchor_deformed, feat_deformed, grid_offsets_deformed, grid_scaling_deformed, is_training=is_training, cam_type=cam_type)     
 
     
     # 이후 과정은 공통임
@@ -1386,7 +1397,7 @@ def render_original(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
             "depth":depth}
 
 
-def prefilter_voxel(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
+def prefilter_voxel(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, cam_type=None):
 
     screenspace_points = torch.zeros_like(pc.get_anchor, dtype=pc.get_anchor.dtype, requires_grad=True, device="cuda") + 0
     try:
@@ -1394,35 +1405,38 @@ def prefilter_voxel(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch
     except:
         pass
 
-    # Set up rasterization configuration
-    tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
-    tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
+    if cam_type != "PanopticSports": 
+        # Set up rasterization configuration
+        tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
+        tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
 
-    #print("viewpoint_camera.image_height_device:",viewpoint_camera.image_height.device) # cpu
-    #print("viewpoint_camera.image_width_device:",viewpoint_camera.image_width.device) # cpu
-    #print("viewpoint_camera.world_view_transform_device:",viewpoint_camera.world_view_transform.device) # cpu
-    #print("viewpoint_camera.full_proj_transform_device:",viewpoint_camera.full_proj_transform.device) # cpu
-    #print("viewpoint_camera.camera_center_device:",viewpoint_camera.camera_center.device) # cpu
+        #print("viewpoint_camera.image_height_device:",viewpoint_camera.image_height.device) # cpu
+        #print("viewpoint_camera.image_width_device:",viewpoint_camera.image_width.device) # cpu
+        #print("viewpoint_camera.world_view_transform_device:",viewpoint_camera.world_view_transform.device) # cpu
+        #print("viewpoint_camera.full_proj_transform_device:",viewpoint_camera.full_proj_transform.device) # cpu
+        #print("viewpoint_camera.camera_center_device:",viewpoint_camera.camera_center.device) # cpu
 
-    # cuda로 옮겨줌
-    viewpoint_camera.world_view_transform = viewpoint_camera.world_view_transform.cuda()
-    viewpoint_camera.full_proj_transform = viewpoint_camera.full_proj_transform.cuda()
-    viewpoint_camera.camera_center = viewpoint_camera.camera_center.cuda()  
+        # cuda로 옮겨줌
+        viewpoint_camera.world_view_transform = viewpoint_camera.world_view_transform.cuda()
+        viewpoint_camera.full_proj_transform = viewpoint_camera.full_proj_transform.cuda()
+        viewpoint_camera.camera_center = viewpoint_camera.camera_center.cuda()  
 
-    raster_settings = GaussianRasterizationSettings(
-        image_height=int(viewpoint_camera.image_height),
-        image_width=int(viewpoint_camera.image_width),
-        tanfovx=tanfovx,
-        tanfovy=tanfovy,
-        bg=bg_color,
-        scale_modifier=scaling_modifier,
-        viewmatrix=viewpoint_camera.world_view_transform,
-        projmatrix=viewpoint_camera.full_proj_transform,
-        sh_degree=1,
-        campos=viewpoint_camera.camera_center,
-        prefiltered=False,
-        debug=pipe.debug
-    )
+        raster_settings = GaussianRasterizationSettings(
+            image_height=int(viewpoint_camera.image_height),
+            image_width=int(viewpoint_camera.image_width),
+            tanfovx=tanfovx,
+            tanfovy=tanfovy,
+            bg=bg_color,
+            scale_modifier=scaling_modifier,
+            viewmatrix=viewpoint_camera.world_view_transform,
+            projmatrix=viewpoint_camera.full_proj_transform,
+            sh_degree=1,
+            campos=viewpoint_camera.camera_center,
+            prefiltered=False,
+            debug=pipe.debug
+        )
+    else:
+        raster_settings = viewpoint_camera['camera']
 
     rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 

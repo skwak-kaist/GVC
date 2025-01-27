@@ -19,14 +19,14 @@ ModelHiddenParams = dict(
      'resolution': [64, 64, 64, 100]
     },
 #    multires = [1,2,4],
-    multires_local = [1,2,4],
+    multires_local = [1,2],
     
-    defor_depth = 1,
+    defor_depth = 0,
     net_width = 128,
     plane_tv_weight = 0.0002,
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
-    render_process=True,
+    render_process=False,
 
 	# 모두 deform     
     anchor_deform = True,
@@ -42,7 +42,7 @@ ModelHiddenParams = dict(
 )
 
 ModelParams = dict(
-    appearance_dim = 16,
+    appearance_dim = 0,
     n_offsets = 10, 
     use_feat_bank = False, 
     voxel_size = 0.01,
@@ -59,19 +59,19 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 4, 
+    num_of_segments = 8, 
     local_deform_method = "explicit",
  
  	# temporal adjustment
     temporal_adjustment = 1,
-    temporal_adjustment_step_size = 0.1,
+    temporal_adjustment_step_size = 0.01,
     temporal_adjustment_threshold = 1.5,
  
 )
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 30000,
+    iterations = 20000, 
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -89,8 +89,8 @@ OptimizationParams = dict(
     update_until = 15000, 
 
 # my test parameters
-    min_opacity = 0.01,
-    success_threshold = 0.7,
+    min_opacity = 0.005,
+    success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	

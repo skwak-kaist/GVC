@@ -19,14 +19,14 @@ ModelHiddenParams = dict(
      'resolution': [64, 64, 64, 100]
     },
 #    multires = [1,2,4],
-    multires_local = [1,2,4],
+    multires_local = [1,2],
     
     defor_depth = 1,
     net_width = 128,
     plane_tv_weight = 0.0002,
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
-    render_process=True,
+    render_process=False,
 
 	# 모두 deform     
     anchor_deform = True,
@@ -71,7 +71,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 30000,
+    iterations = 30000, 
     batch_size=2,
     coarse_iterations = 3000,
     densify_until_iter = 10_000,
@@ -89,7 +89,7 @@ OptimizationParams = dict(
     update_until = 15000, 
 
 # my test parameters
-    min_opacity = 0.01,
+    min_opacity = 0.005,
     success_threshold = 0.7,
     densify_grad_threshold = 0.0002,
 

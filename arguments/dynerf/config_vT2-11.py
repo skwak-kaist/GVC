@@ -42,9 +42,9 @@ ModelHiddenParams = dict(
 )
 
 ModelParams = dict(
-    appearance_dim = 0,
+    appearance_dim = 16,
     n_offsets = 10, 
-    use_feat_bank = False, 
+    use_feat_bank = True, 
     voxel_size = 0.01,
     #voxel_size = 0.001, # voxel size를 늘림 0.001 --> 0.01
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
@@ -90,7 +90,7 @@ OptimizationParams = dict(
 
 # my test parameters
     min_opacity = 0.005,
-    success_threshold = 0.8,
+    success_threshold = 0.85,
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	

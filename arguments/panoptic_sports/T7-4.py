@@ -21,12 +21,12 @@ ModelHiddenParams = dict(
 #    multires = [1,2,4],
     multires_local = [1,2,4],
     
-    defor_depth = 0, # 1--> 0
+    defor_depth = 1,
     net_width = 128,
     plane_tv_weight = 0.0002,
     time_smoothness_weight = 0.001,
     l1_time_planes =  0.0001,
-    render_process=True,
+    render_process=False,
 
 	# 모두 deform     
     anchor_deform = True,
@@ -42,7 +42,7 @@ ModelHiddenParams = dict(
 )
 
 ModelParams = dict(
-    appearance_dim = 0,
+    appearance_dim = 16,
     n_offsets = 10, 
     use_feat_bank = False, 
     voxel_size = 0.01,
@@ -59,12 +59,12 @@ ModelParams = dict(
 	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
-    num_of_segments = 2, 
+    num_of_segments = 4, 
     local_deform_method = "explicit",
  
  	# temporal adjustment
     temporal_adjustment = 1,
-    temporal_adjustment_step_size = 0.01,
+    temporal_adjustment_step_size = 0.1,
     temporal_adjustment_threshold = 1.5,
  
 )
@@ -73,9 +73,9 @@ OptimizationParams = dict(
     # dataloader=True,
     iterations = 20000, 
     batch_size=2,
-    coarse_iterations = 5000,
+    coarse_iterations = 3000,
     densify_until_iter = 10_000,
-    opacity_reset_interval = 60000,
+    opacity_reset_interval = 300000,
     # grid_lr_init = 0.0016,
     # grid_lr_final = 16,
     # opacity_threshold_coarse = 0.005,

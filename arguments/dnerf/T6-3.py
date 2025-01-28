@@ -31,7 +31,7 @@ ModelHiddenParams = dict(
     bounds=1.6,
 
 	# 모두 deform     
-    anchor_deform = False,
+    anchor_deform = True,
     local_context_feature_deform = True,
     grid_offsets_deform = True,
     grid_scale_deform = True,
@@ -44,9 +44,9 @@ ModelHiddenParams = dict(
 )
 
 ModelParams = dict(
-    appearance_dim = 0,
+    appearance_dim = 16,
     n_offsets = 10, 
-    use_feat_bank = False, 
+    use_feat_bank = True, 
     #voxel_size = 0.0005,
     voxel_size = 0.01, # voxel size를 늘림 0.001 --> 0.01
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
@@ -74,9 +74,9 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 14000, 
+    iterations = 20000, 
     batch_size=2,
-    coarse_iterations = 3000,
+    coarse_iterations = 5000,
     deformation_lr_init = 0.00016,
     deformation_lr_final = 0.0000016,
     deformation_lr_delay_mult = 0.01,
@@ -101,7 +101,7 @@ OptimizationParams = dict(
 
 # my test parameters
     min_opacity = 0.001,
-    success_threshold = 0.7,
+    success_threshold = 0.8,
     densify_grad_threshold = 0.0002,
 
 	#dynamics_loss = "mean", # mean or entropy or mean_entropy or entropy_mean, 그 외의 값을 주면 Loss를 걸지 않음	

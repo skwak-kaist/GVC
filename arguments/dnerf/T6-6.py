@@ -37,16 +37,16 @@ ModelHiddenParams = dict(
     grid_scale_deform = True,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    deform_n_offsets = 15, # ModelParams의 n_offsets과 일치시켜야 함    
+    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함    
     dynamics_activation = "sigmoid", 
     
 
 )
 
 ModelParams = dict(
-    appearance_dim = 8,
+    appearance_dim = 16,
     n_offsets = 15, 
-    use_feat_bank = False, 
+    use_feat_bank = True, 
     #voxel_size = 0.0005,
     voxel_size = 0.01, # voxel size를 늘림 0.001 --> 0.01
     feat_dim = 32, # ModelHiddenParams의 feat_dim과 일치시켜야 함
@@ -59,7 +59,7 @@ ModelParams = dict(
 	dynamics = 1, 
 	# 0: None, 1: dynamics(all), 2: dynamic: anchor only, 3: dynamic: local context only, 
 	# 4: dynamic: offset only, 5: anchor and feature, 6: anchor and offset
-	dynamics_type = "mask_mul", # mask or mul or mask_mul or mul_mask
+	dynamics_type = "mul", # mask or mul or mask_mul or mul_mask
     
     temporal_scaffolding = 1,
     num_of_segments = 2, 
@@ -74,7 +74,7 @@ ModelParams = dict(
 
 OptimizationParams = dict(
     # dataloader=True,
-    iterations = 20000, 
+    iterations = 30000, 
     batch_size=2,
     coarse_iterations = 5000,
     deformation_lr_init = 0.00016,
@@ -97,7 +97,7 @@ OptimizationParams = dict(
     start_stat = 500,
     update_from = 1500,
     update_interval = 100,
-    update_until = 7000,
+    update_until = 15000,
 
 # my test parameters
     min_opacity = 0.001,

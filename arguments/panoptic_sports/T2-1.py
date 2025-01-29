@@ -16,7 +16,7 @@ ModelHiddenParams = dict(
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
      #'resolution': [64, 64, 64, 150]
-     'resolution': [64, 64, 64, 100]
+     'resolution': [32, 32, 32, 75]
     },
 #    multires = [1,2,4],
     multires_local = [1,2],

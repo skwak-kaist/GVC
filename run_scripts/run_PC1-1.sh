@@ -1,5 +1,7 @@
 #!/bin/bash 
 
-./run_250123_GVC5.0_dnerf.sh all T1-5 6015 1
-./run_250123_GVC5.0_dnerf.sh all T1-6 6016 1
+sleep 1h
+
+./run_250123_GVC5.0_dnerf.sh all T1-12 6213 1
+./run_250123_GVC5.0_dnerf.sh all T1-16 6214 1
 

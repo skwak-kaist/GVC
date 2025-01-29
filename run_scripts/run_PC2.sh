@@ -1,5 +1,4 @@
 #!/bin/bash 
 
-./run_1118_GVC5.0_dynerf.sh all T2-10 5011 0
-./run_1118_GVC5.0_dynerf.sh all T2-11 5012 0
-
+./run_250123_GVC5.0_panoptic.sh all T2-2 7032 0
+./run_250123_GVC5.0_panoptic.sh all T2-3 7033 1

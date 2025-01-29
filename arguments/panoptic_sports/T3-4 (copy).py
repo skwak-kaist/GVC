@@ -16,7 +16,7 @@ ModelHiddenParams = dict(
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
      #'resolution': [64, 64, 64, 150]
-     'resolution': [64, 64, 64, 75]
+     'resolution': [64, 64, 64, 100]
     },
 #    multires = [1,2,4],
     multires_local = [1,2],
@@ -29,7 +29,7 @@ ModelHiddenParams = dict(
     render_process=False,
 
 	# 모두 deform     
-    anchor_deform = True,
+    anchor_deform = False,
     local_context_feature_deform = True,
     grid_offsets_deform = True,
     grid_scale_deform = True,

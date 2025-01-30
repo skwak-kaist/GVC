@@ -16,7 +16,7 @@ ModelHiddenParams = dict(
      'input_coordinate_dim': 4,
      'output_coordinate_dim': 16,
      #'resolution': [64, 64, 64, 150]
-     'resolution': [64, 64, 64, 100]
+     'resolution': [64, 64, 64, 50]
     },
 #    multires = [1,2,4],
     multires_local = [1,2],
@@ -35,7 +35,7 @@ ModelHiddenParams = dict(
     grid_scale_deform = True,
     
     deform_feat_dim = 32, # ModelParams의 feat_dim과 일치시켜야 함
-    deform_n_offsets = 15, # ModelParams의 n_offsets과 일치시켜야 함    
+    deform_n_offsets = 10, # ModelParams의 n_offsets과 일치시켜야 함    
     dynamics_activation = "sigmoid", 
     
 
@@ -43,7 +43,7 @@ ModelHiddenParams = dict(
 
 ModelParams = dict(
     appearance_dim = 0,
-    n_offsets = 15, 
+    n_offsets = 10, 
     use_feat_bank = False, 
     voxel_size = 0.01,
     #voxel_size = 0.001, # voxel size를 늘림 0.001 --> 0.01
